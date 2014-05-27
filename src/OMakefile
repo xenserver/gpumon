@@ -1,9 +1,11 @@
 IPROG=install -m 755
 IDATA=install -m 644
 
-CAMLFLAGS = -g -dtypes -thread -warn-error +a-4-6-9-27-28-29
+USE_OCAMLFIND = true
+
+OCAMLFLAGS = -g -dtypes -thread -warn-error +a-4-6-9-27-28-29
 CFLAGS+=-I/usr/lib64/ocaml
-OCAMLPACKS = rrd-client
+OCAMLPACKS = threads stdext rrdd-plugin
 
 StaticCLibrary(nvml_stubs, nvml_stubs)
 OCamlLibraryClib(nvml, nvml, nvml_stubs)
