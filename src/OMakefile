@@ -1,0 +1,24 @@
+IPROG=install -m 755
+IDATA=install -m 644
+
+CAMLFLAGS = -g -dtypes -thread -warn-error +a-4-6-9-27-28-29
+CFLAGS+=-I/usr/lib64/ocaml
+OCAMLPACKS = rrd-client
+
+StaticCLibrary(nvml_stubs, nvml_stubs)
+OCamlLibraryClib(nvml, nvml, nvml_stubs)
+
+OCAML_LIBS = nvml
+
+RRDP_GPUMON = rrdp_gpumon
+RRDP_GPUMON_FILES = rrdp_gpumon
+
+OCamlProgram($(RRDP_GPUMON), $(RRDP_GPUMON_FILES))
+
+.PHONY: build
+build: $(RRDP_GPUMON)
+
+.PHONY: clean
+clean:
+	rm -f *.cmi *.cmx *.cmxa *.cmo *.a *.cma *.run *.opt *.annot *.o *.orig *.spit *.spot *.omc
+	rm -f $(RRDP_GPUMON)
