@@ -20,4 +20,4 @@ install: build
 	mkdir -p $(DESTDIR)$(LIBEXECDIR)/xcp-rrdd-plugins/
 	$(IPROG) src/rrdp_gpumon.opt $(DESTDIR)$(LIBEXECDIR)/xcp-rrdd-plugins/xcp-rrdd-gpumon
 	mkdir -p $(DESTDIR)/etc/rc.d/init.d
-	$(IPROG) scripts/init.d-rrdd-gpumon $(DESTDIR)/etc/rc.d/init.d
+	$(IPROG) scripts/init.d-rrdd-gpumon $(DESTDIR)/etc/rc.d/init.d/xcp-rrdd-gpumon
