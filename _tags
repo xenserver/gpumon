@@ -1,0 +1,27 @@
+# OASIS_START
+# DO NOT EDIT (digest: e970301810b6df600aace6a92e5318f4)
+# Ignore VCS directories, you can use the same kind of rule outside 
+# OASIS_START/STOP if you want to exclude directories that contains 
+# useless stuff for the build process
+<**/.svn>: -traverse
+<**/.svn>: not_hygienic
+".bzr": -traverse
+".bzr": not_hygienic
+".hg": -traverse
+".hg": not_hygienic
+".git": -traverse
+".git": not_hygienic
+"_darcs": -traverse
+"_darcs": not_hygienic
+# Executable gpumon
+<src/rrdp_gpumon.{native,byte}>: use_libgpumon_stubs
+<src/rrdp_gpumon.{native,byte}>: pkg_threads
+<src/rrdp_gpumon.{native,byte}>: pkg_stdext
+<src/rrdp_gpumon.{native,byte}>: pkg_rrdd-plugin
+<src/*.ml{,i}>: pkg_threads
+<src/*.ml{,i}>: pkg_stdext
+<src/*.ml{,i}>: pkg_rrdd-plugin
+"src/nvml_stubs.c": pkg_threads
+"src/nvml_stubs.c": pkg_stdext
+"src/nvml_stubs.c": pkg_rrdd-plugin
+# OASIS_STOP

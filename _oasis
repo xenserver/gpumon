@@ -1,0 +1,15 @@
+OASISFormat:               0.3
+Name:                      gpumon
+Version:                   0.2.0
+Synopsis:                  RRDD GPU metrics plugin
+Authors:                   John Else
+License:                   LGPL-2.1 with OCaml linking exception
+BuildTools:                ocamlbuild
+
+Executable gpumon
+  CompiledObject:          best
+  Path:                    src
+  MainIs:                  rrdp_gpumon.ml
+  Install:                 false
+  CSources:                nvml_stubs.c
+  BuildDepends:            threads, stdext, rrdd-plugin

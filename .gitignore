@@ -1,2 +1,6 @@
-.omakedb*
-*.omc
+*.native
+*.swp
+
+_build
+setup.data
+setup.log
