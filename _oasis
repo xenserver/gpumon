@@ -6,10 +6,16 @@ Authors:                   John Else
 License:                   LGPL-2.1 with OCaml linking exception
 BuildTools:                ocamlbuild
 
+Library gpumon_libs
+  CompiledObject:          best
+  Path:                    lib
+  Findlibname:             gpumon-libs
+  Modules:                 Nvml
+  CSources:                nvml_stubs.c
+
 Executable gpumon
   CompiledObject:          best
-  Path:                    src
-  MainIs:                  rrdp_gpumon.ml
+  Path:                    gpumon
+  MainIs:                  gpumon.ml
   Install:                 false
-  CSources:                nvml_stubs.c
-  BuildDepends:            threads, stdext, rrdd-plugin
+  BuildDepends:            gpumon-libs, threads, stdext, rrdd-plugin

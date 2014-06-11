@@ -23,6 +23,6 @@ clean:
 .PHONY: install
 install: build
 	mkdir -p $(DESTDIR)$(LIBEXECDIR)/xcp-rrdd-plugins/
-	$(IPROG) _build/src/rrdp_gpumon.native $(DESTDIR)$(LIBEXECDIR)/xcp-rrdd-plugins/xcp-rrdd-gpumon
+	$(IPROG) _build/gpumon/gpumon.native $(DESTDIR)$(LIBEXECDIR)/xcp-rrdd-plugins/xcp-rrdd-gpumon
 	mkdir -p $(DESTDIR)/etc/rc.d/init.d
 	$(IPROG) scripts/init.d-rrdd-gpumon $(DESTDIR)/etc/rc.d/init.d/xcp-rrdd-gpumon

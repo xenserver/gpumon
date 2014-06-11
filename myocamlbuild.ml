@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 250946029a5902a17aa137d8d04f57fc) *)
+(* DO NOT EDIT (digest: 095e0c277aa20beaea36876435342602) *)
 module OASISGettext = struct
 (* # 21 "src/oasis/OASISGettext.ml" *)
 
@@ -477,10 +477,10 @@ end
 open Ocamlbuild_plugin;;
 let package_default =
   {
-     MyOCamlbuildBase.lib_ocaml = [];
-     lib_c = [("gpumon", "src", [])];
+     MyOCamlbuildBase.lib_ocaml = [("gpumon_libs", ["lib"])];
+     lib_c = [("gpumon_libs", "lib", [])];
      flags = [];
-     includes = []
+     includes = [("gpumon", ["lib"])]
   }
   ;;
 
