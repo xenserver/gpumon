@@ -20,3 +20,14 @@ Executable gpumon
   MainIs:                  gpumon.ml
   Install:                 false
   BuildDepends:            gpumon-libs, threads, stdext, rrdd-plugin
+
+Executable test_main
+  Build$:                  flag(tests)
+  CompiledObject:          best
+  Path:                    test
+  MainIs:                  test_main.ml
+  Install:                 false
+  BuildDepends:            gpumon-libs, oUnit
+
+Test test_main
+  Command:                 $test_main
