@@ -30,6 +30,8 @@ let metric_of_string str =
 	| "memoryio" -> Utilisation MemoryIO
 	| _ -> raise (Invalid_argument str)
 
+type config = ((int32 * metric list) list)
+
 let metric_of_rpc = function
 	| Rpc.String str -> metric_of_string str
 	| rpc -> raise (Invalid_argument (Rpc.to_string rpc))

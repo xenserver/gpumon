@@ -4,7 +4,7 @@ module Common = Rrdp_common.Common(struct let name = "xcp-rrdd-gpumon" end)
 
 let nvidia_vendor_id = 0x10del
 
-let default_config : (int32 * ((int32 * Config.metric list) list)) list =
+let default_config : (int32 * Config.config) list =
 	let open Config in [
 		(* NVIDIA Corporation *)
 		nvidia_vendor_id, [
