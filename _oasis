@@ -10,8 +10,9 @@ Library gpumon_libs
   CompiledObject:          best
   Path:                    lib
   Findlibname:             gpumon-libs
-  Modules:                 Nvml
+  Modules:                 Config, Nvml
   CSources:                nvml_stubs.c
+  BuildDepends:            stdext
 
 Executable gpumon
   CompiledObject:          best

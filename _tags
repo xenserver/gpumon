@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: cc822d088a7319db31176e7f860ca988)
+# DO NOT EDIT (digest: 067d1fa805e8357bbba657a9f5981fe7)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -16,6 +16,8 @@
 # Library gpumon_libs
 "lib/gpumon_libs.cmxs": use_gpumon_libs
 <lib/gpumon_libs.{cma,cmxa}>: use_libgpumon_libs_stubs
+<lib/*.ml{,i}>: pkg_stdext
+"lib/nvml_stubs.c": pkg_stdext
 # Executable gpumon
 <gpumon/gpumon.{native,byte}>: use_gpumon_libs
 <gpumon/gpumon.{native,byte}>: pkg_threads

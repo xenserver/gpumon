@@ -2,71 +2,42 @@ open Fun
 
 module Common = Rrdp_common.Common(struct let name = "xcp-rrdd-gpumon" end)
 
-(* Metrics which require calling nvmlDeviceGetMemoryInfo *)
-type memory_metric =
-	| Free
-	| Used
-
-(* Metrics which have their own NVML calls. *)
-type other_metric =
-	| PowerUsage
-	| Temperature
-
-(* Metrics which require calling nvmlDeviceGetUtilizationRates *)
-type utilisation_metric =
-	| Compute
-	| MemoryIO
-
-type metric =
-	| Memory of memory_metric
-	| Utilisation of utilisation_metric
-	| Other of other_metric
-
-let metric_of_string str =
-	match String.lowercase str with
-	| "memoryfree" -> Memory Free
-	| "memoryused" -> Memory Used
-	| "temperature" -> Other Temperature
-	| "powerusage" -> Other PowerUsage
-	| "compute" -> Utilisation Compute
-	| "memoryio" -> Utilisation MemoryIO
-	| _ -> raise (Invalid_argument str)
-
 let nvidia_vendor_id = 0x10del
 
-let default_config : (int32 * ((int32 * metric list) list)) list = [
-	(* NVIDIA Corporation *)
-	nvidia_vendor_id, [
-		(* GRID K1 *)
-		0x0ff2l, [
-			Memory Free;
-			Memory Used;
-			Other Temperature;
-			Other PowerUsage;
-			Utilisation Compute;
-			Utilisation MemoryIO;
-		];
-		(* GRID K2 *)
-		0x11bfl, [
-			Memory Free;
-			Memory Used;
-			Other Temperature;
-			Other PowerUsage;
-			Utilisation Compute;
-			Utilisation MemoryIO;
-		];
+let default_config : (int32 * ((int32 * Config.metric list) list)) list =
+	let open Config in [
+		(* NVIDIA Corporation *)
+		nvidia_vendor_id, [
+			(* GRID K1 *)
+			0x0ff2l, [
+				Memory Free;
+				Memory Used;
+				Other Temperature;
+				Other PowerUsage;
+				Utilisation Compute;
+				Utilisation MemoryIO;
+			];
+			(* GRID K2 *)
+			0x11bfl, [
+				Memory Free;
+				Memory Used;
+				Other Temperature;
+				Other PowerUsage;
+				Utilisation Compute;
+				Utilisation MemoryIO;
+			];
+		]
 	]
-]
 
 let categorise_metrics =
 	List.fold_left
 		(fun (memory_metrics, other_metrics, utilisation_metrics) metric ->
 			match metric with
-			| Memory x ->
+			| Config.Memory x ->
 				x :: memory_metrics, other_metrics, utilisation_metrics
-			| Other x ->
+			| Config.Other x ->
 				memory_metrics, x :: other_metrics, utilisation_metrics
-			| Utilisation x ->
+			| Config.Utilisation x ->
 				memory_metrics, other_metrics, x :: utilisation_metrics)
 		([], [], [])
 
@@ -84,46 +55,11 @@ let get_required_metrics config pci_id =
 
 let nvidia_config_path = "/usr/share/nvidia/monitoring.conf"
 
-let metric_of_rpc = function
-	| Rpc.String str -> metric_of_string str
-	| rpc -> raise (Invalid_argument (Rpc.to_string rpc))
-
-let metrics_of_rpc = function
-	| Rpc.Enum metrics -> List.map metric_of_rpc metrics
-	| rpc -> raise (Invalid_argument (Rpc.to_string rpc))
-
-let read_config data =
-	try
-		match Jsonrpc.of_string data with
-		| Rpc.Dict gpu_configs -> begin
-			let config = List.fold_left
-				(fun acc (device_id_string, metrics_rpc) ->
-					try
-						let device_id = Scanf.sscanf device_id_string "%lx" (fun x -> x) in
-						let metrics =
-							metrics_of_rpc metrics_rpc
-							|> Listext.List.setify
-						in
-						(device_id, metrics) :: acc
-					with e ->
-						acc)
-				[] gpu_configs
-			in
-			`Ok config
-		end
-		| rpc -> raise (Invalid_argument (Rpc.to_string rpc))
-	with e ->
-		`Parse_failure (Printexc.to_string e)
-
-let read_config_file path =
-	if Sys.file_exists path then Unixext.string_of_file path |> read_config
-	else `Does_not_exist
-
 (** Try to load the config file; if this fails fall back to default_config.
  *  See perf-tools.hg/scripts/monitoring.conf.example for an example of the
  *  expected config file format. *)
 let load_config () =
-	match read_config_file nvidia_config_path with
+	match Config.of_file nvidia_config_path with
 	| `Ok config -> [nvidia_vendor_id, config]
 	| `Does_not_exist ->
 		Common.D.error "Config file %s not found" nvidia_config_path;
@@ -138,9 +74,9 @@ type gpu = {
 	device: Nvml.device;
 	bus_id: string;
 	bus_id_escaped: string;
-	memory_metrics: memory_metric list;
-	utilisation_metrics: utilisation_metric list;
-	other_metrics: other_metric list;
+	memory_metrics: Config.memory_metric list;
+	utilisation_metrics: Config.utilisation_metric list;
+	other_metrics: Config.other_metric list;
 }
 
 (* Adding colons to datasource names confuses RRD parsers, so replace all
@@ -186,7 +122,7 @@ let generate_gpu_dss interface gpu =
 			let memory_info = Nvml.device_get_memory_info interface gpu.device in
 			List.map
 				(function
-					| Free ->
+					| Config.Free ->
 						Ds.ds_make
 							~name:("gpu_memory_free_" ^ gpu.bus_id_escaped)
 							~description:"Unallocated framebuffer memory"
@@ -195,7 +131,7 @@ let generate_gpu_dss interface gpu =
 							~default:false
 							~units:"B" (),
 						Rrd.Host
-					| Used ->
+					| Config.Used ->
 						Ds.ds_make
 							~name:("gpu_memory_used_" ^ gpu.bus_id_escaped)
 							~description:"Allocated framebuffer memory"
@@ -209,7 +145,7 @@ let generate_gpu_dss interface gpu =
 	let other_dss =
 		List.map
 			(function
-				| PowerUsage ->
+				| Config.PowerUsage ->
 					let power_usage = Nvml.device_get_power_usage interface gpu.device in
 					Ds.ds_make
 						~name:("gpu_power_usage_" ^ gpu.bus_id_escaped)
@@ -219,7 +155,7 @@ let generate_gpu_dss interface gpu =
 						~default:false
 						~units:"mW" (),
 					Rrd.Host
-				| Temperature ->
+				| Config.Temperature ->
 					let temperature = Nvml.device_get_temperature interface gpu.device in
 					Ds.ds_make
 						~name:("gpu_temperature_" ^ gpu.bus_id_escaped)
@@ -239,7 +175,7 @@ let generate_gpu_dss interface gpu =
 				Nvml.device_get_utilization_rates interface gpu.device in
 			List.map
 				(function
-					| Compute ->
+					| Config.Compute ->
 						Ds.ds_make
 							~name:("gpu_utilisation_compute_" ^ gpu.bus_id_escaped)
 							~description:("Proportion of time over the past sample period during"^
@@ -251,7 +187,7 @@ let generate_gpu_dss interface gpu =
 							~max:1.0
 							~units:"(fraction)" (),
 						Rrd.Host
-					| MemoryIO ->
+					| Config.MemoryIO ->
 						Ds.ds_make
 							~name:("gpu_utilisation_memory_io_" ^ gpu.bus_id_escaped)
 							~description:("Proportion of time over the past sample period during"^
