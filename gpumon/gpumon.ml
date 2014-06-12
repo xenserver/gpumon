@@ -92,17 +92,11 @@ let metrics_of_rpc = function
 	| Rpc.Enum metrics -> List.map metric_of_rpc metrics
 	| rpc -> raise (Invalid_argument (Rpc.to_string rpc))
 
-(** Try to load the config file; if this fails fall back to default_config.
- *  See perf-tools.hg/scripts/monitoring.conf.example for an example of the
- *  expected config file format. *)
-let load_config () =
+let read_config data =
 	try
-		let nvidia_config = match
-			Unixext.string_of_file nvidia_config_path
-			|> Jsonrpc.of_string
-		with
+		match Jsonrpc.of_string data with
 		| Rpc.Dict gpu_configs -> begin
-			List.fold_left
+			let config = List.fold_left
 				(fun acc (device_id_string, metrics_rpc) ->
 					try
 						let device_id = Scanf.sscanf device_id_string "%lx" (fun x -> x) in
@@ -112,20 +106,32 @@ let load_config () =
 						in
 						(device_id, metrics) :: acc
 					with e ->
-						Common.D.warn
-							"Failed to parse config for device ID %s: %s"
-							device_id_string
-							(Printexc.to_string e);
 						acc)
 				[] gpu_configs
+			in
+			`Ok config
 		end
-		| _ -> failwith "Invalid config file format"
-		in
-		[nvidia_vendor_id, nvidia_config]
+		| rpc -> raise (Invalid_argument (Rpc.to_string rpc))
 	with e ->
-		Common.D.error
-			"Caught (%s) while reading config file; falling back to default."
-			(Printexc.to_string e);
+		`Parse_failure (Printexc.to_string e)
+
+let read_config_file path =
+	if Sys.file_exists path then Unixext.string_of_file path |> read_config
+	else `Does_not_exist
+
+(** Try to load the config file; if this fails fall back to default_config.
+ *  See perf-tools.hg/scripts/monitoring.conf.example for an example of the
+ *  expected config file format. *)
+let load_config () =
+	match read_config_file nvidia_config_path with
+	| `Ok config -> [nvidia_vendor_id, config]
+	| `Does_not_exist ->
+		Common.D.error "Config file %s not found" nvidia_config_path;
+		Common.D.warn "Using default config";
+		default_config
+	| `Parse_failure msg ->
+		Common.D.error "Caught exception parsing config file: %s" msg;
+		Common.D.warn "Using default config";
 		default_config
 
 type gpu = {
