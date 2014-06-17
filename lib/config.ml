@@ -57,7 +57,7 @@ let of_string data =
 						acc)
 				[] gpu_configs
 			in
-			`Ok config
+			`Ok (List.rev config)
 		end
 		| rpc -> raise (Invalid_argument (Rpc.to_string rpc))
 	with e ->
