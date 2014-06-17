@@ -24,3 +24,5 @@ val of_string : string -> [`Ok of config | `Parse_failure of string]
 
 val of_file : string ->
 	[`Ok of config | `Parse_failure of string | `Does_not_exist]
+
+val to_string : config -> string

@@ -30,7 +30,13 @@ let metric_of_string str =
 	| "memoryio" -> Utilisation MemoryIO
 	| _ -> raise (Invalid_argument str)
 
-type config = ((int32 * metric list) list)
+let string_of_metric = function
+	| Memory Free -> "memoryfree"
+	| Memory Used -> "memoryused"
+	| Other Temperature -> "temperature"
+	| Other PowerUsage -> "powerusage"
+	| Utilisation Compute -> "compute"
+	| Utilisation MemoryIO -> "memoryio"
 
 let metric_of_rpc = function
 	| Rpc.String str -> metric_of_string str
@@ -39,6 +45,12 @@ let metric_of_rpc = function
 let metrics_of_rpc = function
 	| Rpc.Enum metrics -> List.map metric_of_rpc metrics
 	| rpc -> raise (Invalid_argument (Rpc.to_string rpc))
+
+let rpc_of_metric metric = Rpc.String (string_of_metric metric)
+
+let rpc_of_metrics metrics = Rpc.Enum (List.map rpc_of_metric metrics)
+
+type config = ((int32 * metric list) list)
 
 let of_string data =
 	try
@@ -66,3 +78,12 @@ let of_string data =
 let of_file path =
 	if Sys.file_exists path then Unixext.string_of_file path |> of_string
 	else `Does_not_exist
+
+let to_string config =
+	Rpc.Dict
+		(List.map
+			(fun (device_id, metrics) ->
+				Printf.sprintf "%04lx" device_id,
+				rpc_of_metrics metrics)
+			config)
+	|> Jsonrpc.to_string
