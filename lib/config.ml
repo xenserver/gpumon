@@ -59,23 +59,24 @@ type config = {
 	device_types: device_type list;
 }
 
+let of_v1_format gpu_configs =
+	let config = List.fold_left
+		(fun acc (device_id_string, metrics_rpc) ->
+			try
+				let device_id = Scanf.sscanf device_id_string "%lx" (fun x -> x) in
+				let metrics =
+					metrics_of_rpc metrics_rpc
+					|> Listext.List.setify
+				in
+				{device_id; metrics} :: acc
+			with e ->
+				acc)
+		[] gpu_configs
+	in
+	`Ok {device_types = (List.rev config)}
+
 let of_rpc = function
-	| Rpc.Dict gpu_configs -> begin
-		let config = List.fold_left
-			(fun acc (device_id_string, metrics_rpc) ->
-				try
-					let device_id = Scanf.sscanf device_id_string "%lx" (fun x -> x) in
-					let metrics =
-						metrics_of_rpc metrics_rpc
-						|> Listext.List.setify
-					in
-					{device_id; metrics} :: acc
-				with e ->
-					acc)
-			[] gpu_configs
-		in
-		`Ok {device_types = (List.rev config)}
-	end
+	| Rpc.Dict gpu_configs -> of_v1_format gpu_configs
 	| _ -> `Parse_failure "No top-level dictionary"
 
 let of_string data =
