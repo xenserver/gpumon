@@ -1,3 +1,5 @@
+(* test test test *)
+
 open Fun
 
 module Common = Rrdp_common.Common(struct let name = "xcp-rrdd-gpumon" end)
