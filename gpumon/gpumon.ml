@@ -7,26 +7,35 @@ let nvidia_vendor_id = 0x10del
 let default_config : (int32 * Config.config) list =
 	let open Config in [
 		(* NVIDIA Corporation *)
-		nvidia_vendor_id, [
-			(* GRID K1 *)
-			0x0ff2l, [
-				Memory Free;
-				Memory Used;
-				Other Temperature;
-				Other PowerUsage;
-				Utilisation Compute;
-				Utilisation MemoryIO;
-			];
-			(* GRID K2 *)
-			0x11bfl, [
-				Memory Free;
-				Memory Used;
-				Other Temperature;
-				Other PowerUsage;
-				Utilisation Compute;
-				Utilisation MemoryIO;
-			];
-		]
+		nvidia_vendor_id,
+		{
+			device_types = [
+				(* GRID K1 *)
+				{
+					device_id = 0x0ff2l;
+					metrics = [
+						Memory Free;
+						Memory Used;
+						Other Temperature;
+						Other PowerUsage;
+						Utilisation Compute;
+						Utilisation MemoryIO;
+					];
+				};
+				(* GRID K2 *)
+				{
+					device_id = 0x11bfl;
+					metrics = [
+						Memory Free;
+						Memory Used;
+						Other Temperature;
+						Other PowerUsage;
+						Utilisation Compute;
+						Utilisation MemoryIO;
+					];
+				};
+			]
+		}
 	]
 
 let categorise_metrics =
@@ -49,8 +58,14 @@ let get_required_metrics config pci_id =
 	let vendor_id = Int32.logand 0xffffl pci_id in
 	let device_id = Int32.shift_right_logical pci_id 16 in
 	try
+		let open Config in
 		let vendor_config = List.assoc vendor_id config in
-		Some (List.assoc device_id vendor_config |> categorise_metrics)
+		let device =
+			List.find
+				(fun device -> device.device_id = device_id)
+				vendor_config.device_types
+		in
+		Some (categorise_metrics device.metrics)
 	with Not_found -> None
 
 let nvidia_config_path = "/usr/share/nvidia/monitoring.conf"

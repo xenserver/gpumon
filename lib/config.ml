@@ -50,7 +50,14 @@ let rpc_of_metric metric = Rpc.String (string_of_metric metric)
 
 let rpc_of_metrics metrics = Rpc.Enum (List.map rpc_of_metric metrics)
 
-type config = ((int32 * metric list) list)
+type device_type = {
+	device_id: int32;
+	metrics: metric list;
+}
+
+type config = {
+	device_types: device_type list;
+}
 
 let of_rpc = function
 	| Rpc.Dict gpu_configs -> begin
@@ -62,12 +69,12 @@ let of_rpc = function
 						metrics_of_rpc metrics_rpc
 						|> Listext.List.setify
 					in
-					(device_id, metrics) :: acc
+					{device_id; metrics} :: acc
 				with e ->
 					acc)
 			[] gpu_configs
 		in
-		`Ok (List.rev config)
+		`Ok {device_types = (List.rev config)}
 	end
 	| _ -> `Parse_failure "No top-level dictionary"
 
@@ -82,8 +89,8 @@ let of_file path =
 let to_string config =
 	Rpc.Dict
 		(List.map
-			(fun (device_id, metrics) ->
+			(fun {device_id; metrics} ->
 				Printf.sprintf "%04lx" device_id,
 				rpc_of_metrics metrics)
-			config)
+			config.device_types)
 	|> Jsonrpc.to_string

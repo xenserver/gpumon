@@ -18,7 +18,14 @@ type metric =
 	| Utilisation of utilisation_metric
 	| Other of other_metric
 
-type config = ((int32 * metric list) list)
+type device_type = {
+	device_id: int32;
+	metrics: metric list;
+}
+
+type config = {
+	device_types: device_type list;
+}
 
 val of_string : string -> [`Ok of config | `Parse_failure of string]
 

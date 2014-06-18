@@ -16,27 +16,35 @@ let tests =
 	let open Config in
 	[
 		"test_does_not_exist.conf", `Does_not_exist;
-		"test_default.conf", `Ok [
-			(* GRID K1 *)
-			0x0ff2l, [
-				Memory Free;
-				Memory Used;
-				Other Temperature;
-				Other PowerUsage;
-				Utilisation Compute;
-				Utilisation MemoryIO;
+		"test_default.conf", `Ok {
+			device_types = [
+				(* GRID K1 *)
+				{
+					device_id = 0x0ff2l;
+					metrics = [
+						Memory Free;
+						Memory Used;
+						Other Temperature;
+						Other PowerUsage;
+						Utilisation Compute;
+						Utilisation MemoryIO;
+					];
+				};
+				(* GRID K2 *)
+				{
+					device_id = 0x11bfl;
+					metrics = [
+						Memory Free;
+						Memory Used;
+						Other Temperature;
+						Other PowerUsage;
+						Utilisation Compute;
+						Utilisation MemoryIO;
+					];
+				};
 			];
-			(* GRID K2 *)
-			0x11bfl, [
-				Memory Free;
-				Memory Used;
-				Other Temperature;
-				Other PowerUsage;
-				Utilisation Compute;
-				Utilisation MemoryIO;
-			];
-		];
-		"test_minimal.conf", `Ok [];
+		};
+		"test_minimal.conf", `Ok {device_types = []};
 	]
 
 let test =
