@@ -52,28 +52,28 @@ let rpc_of_metrics metrics = Rpc.Enum (List.map rpc_of_metric metrics)
 
 type config = ((int32 * metric list) list)
 
+let of_rpc = function
+	| Rpc.Dict gpu_configs -> begin
+		let config = List.fold_left
+			(fun acc (device_id_string, metrics_rpc) ->
+				try
+					let device_id = Scanf.sscanf device_id_string "%lx" (fun x -> x) in
+					let metrics =
+						metrics_of_rpc metrics_rpc
+						|> Listext.List.setify
+					in
+					(device_id, metrics) :: acc
+				with e ->
+					acc)
+			[] gpu_configs
+		in
+		`Ok (List.rev config)
+	end
+	| _ -> `Parse_failure "No top-level dictionary"
+
 let of_string data =
-	try
-		match Jsonrpc.of_string data with
-		| Rpc.Dict gpu_configs -> begin
-			let config = List.fold_left
-				(fun acc (device_id_string, metrics_rpc) ->
-					try
-						let device_id = Scanf.sscanf device_id_string "%lx" (fun x -> x) in
-						let metrics =
-							metrics_of_rpc metrics_rpc
-							|> Listext.List.setify
-						in
-						(device_id, metrics) :: acc
-					with e ->
-						acc)
-				[] gpu_configs
-			in
-			`Ok (List.rev config)
-		end
-		| rpc -> raise (Invalid_argument (Rpc.to_string rpc))
-	with e ->
-		`Parse_failure (Printexc.to_string e)
+	try Jsonrpc.of_string data |> of_rpc
+	with e -> `Parse_failure (Printexc.to_string e)
 
 let of_file path =
 	if Sys.file_exists path then Unixext.string_of_file path |> of_string
