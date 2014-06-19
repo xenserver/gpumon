@@ -32,9 +32,8 @@ type config = {
 	device_types: device_type list;
 }
 
-val of_string : string -> [`Ok of config | `Parse_failure of string]
+val of_string : string -> (config, [`Parse_failure of string]) Result.t
 
-val of_file : string ->
-	[`Ok of config | `Parse_failure of string | `Does_not_exist]
+val of_file : string -> (config, [`Parse_failure of string | `Does_not_exist]) Result.t
 
 val to_string : config -> string

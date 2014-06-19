@@ -1,8 +1,8 @@
 open OUnit
 
 let string_of_result = function
-	| `Parse_failure msg -> Printf.sprintf "Parse_failure %s" msg
-	| `Does_not_exist -> "Does_not_exist"
+	| `Error (`Parse_failure msg) -> Printf.sprintf "Parse_failure %s" msg
+	| `Error `Does_not_exist -> "Does_not_exist"
 	| `Ok config -> Printf.sprintf "Ok %s" (Config.to_string config)
 
 let test_file config_file expected_result =
@@ -15,7 +15,7 @@ let test_file config_file expected_result =
 let tests =
 	let open Config in
 	[
-		"test_does_not_exist.conf", `Does_not_exist;
+		"test_does_not_exist.conf", `Error `Does_not_exist;
 		"test_default.conf", `Ok {
 			device_types = [
 				(* GRID K1 *)

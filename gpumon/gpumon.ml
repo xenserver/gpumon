@@ -78,11 +78,11 @@ let nvidia_config_path = "/usr/share/nvidia/monitoring.conf"
 let load_config () =
 	match Config.of_file nvidia_config_path with
 	| `Ok config -> [nvidia_vendor_id, config]
-	| `Does_not_exist ->
+	| `Error `Does_not_exist ->
 		Common.D.error "Config file %s not found" nvidia_config_path;
 		Common.D.warn "Using default config";
 		default_config
-	| `Parse_failure msg ->
+	| `Error (`Parse_failure msg) ->
 		Common.D.error "Caught exception parsing config file: %s" msg;
 		Common.D.warn "Using default config";
 		default_config
