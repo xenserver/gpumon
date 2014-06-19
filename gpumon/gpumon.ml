@@ -13,6 +13,7 @@ let default_config : (int32 * Config.config) list =
 				(* GRID K1 *)
 				{
 					device_id = 0x0ff2l;
+					subsystem_device_id = Any;
 					metrics = [
 						Memory Free;
 						Memory Used;
@@ -25,6 +26,7 @@ let default_config : (int32 * Config.config) list =
 				(* GRID K2 *)
 				{
 					device_id = 0x11bfl;
+					subsystem_device_id = Any;
 					metrics = [
 						Memory Free;
 						Memory Used;

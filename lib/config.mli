@@ -18,8 +18,13 @@ type metric =
 	| Utilisation of utilisation_metric
 	| Other of other_metric
 
+type 'a requirement =
+	| Match of 'a
+	| Any
+
 type device_type = {
 	device_id: int32;
+	subsystem_device_id: int32 requirement;
 	metrics: metric list;
 }
 

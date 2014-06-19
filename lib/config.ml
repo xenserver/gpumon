@@ -50,8 +50,13 @@ let rpc_of_metric metric = Rpc.String (string_of_metric metric)
 
 let rpc_of_metrics metrics = Rpc.Enum (List.map rpc_of_metric metrics)
 
+type 'a requirement =
+	| Match of 'a
+	| Any
+
 type device_type = {
 	device_id: int32;
+	subsystem_device_id: int32 requirement;
 	metrics: metric list;
 }
 
@@ -68,7 +73,11 @@ let of_v1_format gpu_configs =
 					metrics_of_rpc metrics_rpc
 					|> Listext.List.setify
 				in
-				{device_id; metrics} :: acc
+				{
+					device_id;
+					subsystem_device_id = Any;
+					metrics;
+				} :: acc
 			with e ->
 				acc)
 		[] gpu_configs
