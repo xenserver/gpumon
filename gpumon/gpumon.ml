@@ -86,6 +86,10 @@ let load_config () =
 		Common.D.error "Caught exception parsing config file: %s" msg;
 		Common.D.warn "Using default config";
 		default_config
+	| `Error (`Unknown_version version) ->
+		Common.D.error "Unknown config file version: %s" version;
+		Common.D.warn "Using default config";
+		default_config
 
 type gpu = {
 	device: Nvml.device;

@@ -65,12 +65,40 @@ type config = {
 	device_types: device_type list;
 }
 
-let of_v1_format gpu_configs =
+type config_version =
+	| V1
+	| V2
+
+let version_of_dict dict =
+	let version_key = "version" in
+	if List.mem_assoc version_key dict then begin
+		match List.assoc version_key dict with
+		| Rpc.String "2" -> return V2
+		| rpc -> fail (`Unknown_version (Jsonrpc.to_string rpc))
+	end else
+		return V1
+
+let unbox_string = function
+	| Rpc.String str -> return str
+	| rpc -> fail (`Parse_failure (Jsonrpc.to_string rpc))
+
+let unbox_enum = function
+	| Rpc.Enum enum -> return enum
+	| rpc -> fail (`Parse_failure (Jsonrpc.to_string rpc))
+
+let lookup key dict =
+	try return (List.assoc key dict)
+	with Not_found -> fail (`Parse_failure (Rpc.Dict dict |> Jsonrpc.to_string))
+
+let id_of_string str =
+	try return (Scanf.sscanf str "%lx" (fun x -> x))
+	with Scanf.Scan_failure _ -> fail (`Parse_failure str)
+
+let of_v1_format dict =
 	Result.map
 		(fun (device_id_string, metrics_rpc) ->
 			(* Try to read the device ID. *)
-			(try return (Scanf.sscanf device_id_string "%lx" (fun x -> x))
-			with Scanf.Scan_failure _ -> fail (`Parse_failure device_id_string))
+			(id_of_string device_id_string)
 			(* Try to read the list of metrics. *)
 			>>= (fun device_id ->
 				metrics_of_rpc metrics_rpc
@@ -82,11 +110,49 @@ let of_v1_format gpu_configs =
 					subsystem_device_id = Any;
 					metrics;
 				})))
-		gpu_configs
+		dict
 	>|= (fun device_types -> {device_types})
 
+let device_type_of_v2_format = function
+	| Rpc.Dict dict -> begin
+		(* Try to read the device ID. *)
+		(lookup "device_id" dict >>= unbox_string >>= id_of_string)
+		(* Try to read the subsystem device ID. If it's not in the dictionary then
+		 * assume we don't need to match it. *)
+		>>= (fun device_id ->
+			(if List.mem_assoc "subsystem_device_id" dict
+			then
+				(List.assoc "subsystem_device_id" dict |> unbox_string >>= id_of_string)
+				>>= (fun id -> return (Match id))
+			else return Any)
+		(* Try to read the list of metrics. *)
+		>>= (fun subsystem_device_id ->
+			(lookup "metrics" dict >>= metrics_of_rpc)
+		(* Return the constructed device type. *)
+		>>= (fun metrics ->
+			return {
+				device_id;
+				subsystem_device_id;
+				metrics;
+			})))
+	end
+	| rpc -> fail (`Parse_failure (Jsonrpc.to_string rpc))
+
+let device_types_of_v2_format = function
+	| Rpc.Enum items -> Result.map device_type_of_v2_format items
+	| rpc -> fail (`Parse_failure (Jsonrpc.to_string rpc))
+
+let of_v2_format dict =
+	lookup "device_types" dict
+	>>= device_types_of_v2_format
+	>>= (fun device_types -> return {device_types})
+
 let of_rpc = function
-	| Rpc.Dict gpu_configs -> of_v1_format gpu_configs
+	| Rpc.Dict dict ->
+		version_of_dict dict
+		>>= (function
+			| V1 -> of_v1_format dict
+			| V2 -> of_v2_format dict)
 	| _ -> fail (`Parse_failure "No top-level dictionary")
 
 let of_string data =

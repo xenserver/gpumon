@@ -2,6 +2,8 @@ open OUnit
 
 let string_of_result = function
 	| `Error (`Parse_failure msg) -> Printf.sprintf "Parse_failure %s" msg
+	| `Error (`Unknown_version version) ->
+		Printf.sprintf "Unknown_version %s" version
 	| `Error `Does_not_exist -> "Does_not_exist"
 	| `Ok config -> Printf.sprintf "Ok %s" (Config.to_string config)
 
