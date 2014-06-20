@@ -54,17 +54,26 @@ let categorise_metrics =
 
 (** NVML returns the PCI ID as an int32, where the most significant 16 bits make
  *  up the device ID and the least significant 16 bits make up the vendor ID.
- *  This function checks that a PCI ID represents a supported combination of
- *  device and vendor. *)
-let get_required_metrics config pci_id =
-	let vendor_id = Int32.logand 0xffffl pci_id in
-	let device_id = Int32.shift_right_logical pci_id 16 in
+ *  This function checks that a device has a supported combination of vendor ID,
+ *  device ID and, if applicable, subsystem device ID.
+ *
+ *  If all these IDs match, the required list of metrics for this device is
+ *  returned. *)
+let get_required_metrics config pci_info =
+	let vendor_id = Int32.logand 0xffffl pci_info.Nvml.pci_device_id in
+	let device_id = Int32.shift_right_logical pci_info.Nvml.pci_device_id 16 in
 	try
 		let open Config in
 		let vendor_config = List.assoc vendor_id config in
 		let device =
 			List.find
-				(fun device -> device.device_id = device_id)
+				(fun device ->
+					(* Check that the device ID matches. *)
+					device.device_id = device_id &&
+					(* Check that the subsystem device ID matches, if necessary. *)
+					(match device.subsystem_device_id with
+					| Match id -> id = pci_info.Nvml.pci_subsystem_id
+					| Any -> true))
 				vendor_config.device_types
 		in
 		Some (categorise_metrics device.metrics)
@@ -113,7 +122,7 @@ let get_gpus interface =
 		if index >= 0 then begin
 			let device = Nvml.device_get_handle_by_index interface index in
 			let pci_info = Nvml.device_get_pci_info interface device in
-			match get_required_metrics config pci_info.Nvml.pci_device_id with
+			match get_required_metrics config pci_info with
 			| Some (memory_metrics, other_metrics, utilisation_metrics) -> begin
 				Nvml.device_set_persistence_mode interface device Nvml.Enabled;
 				let bus_id = String.lowercase pci_info.Nvml.bus_id in
