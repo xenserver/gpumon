@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 095e0c277aa20beaea36876435342602) *)
+(* DO NOT EDIT (digest: 4cfbef4c1c503935b274c90b684c2151) *)
 module OASISGettext = struct
 (* # 21 "src/oasis/OASISGettext.ml" *)
 
@@ -480,7 +480,7 @@ let package_default =
      MyOCamlbuildBase.lib_ocaml = [("gpumon_libs", ["lib"])];
      lib_c = [("gpumon_libs", "lib", [])];
      flags = [];
-     includes = [("gpumon", ["lib"])]
+     includes = [("test", ["lib"]); ("gpumon", ["lib"])]
   }
   ;;
 

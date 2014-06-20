@@ -4,6 +4,8 @@ include $(B_BASE)/rpmbuild.mk
 IPROG=install -m 755
 IDATA=install -m 644
 
+TESTS_FLAG=--enable-tests
+
 J=4
 
 LIBEXECDIR?=/opt/xensource/libexec
@@ -11,10 +13,13 @@ LIBEXECDIR?=/opt/xensource/libexec
 all: build
 
 setup.data:
-	ocaml setup.ml -configure
+	ocaml setup.ml -configure $(TESTS_FLAG)
 
 build: setup.data
 	ocaml setup.ml -build -j $(J)
+
+test: build
+	ocaml setup.ml -test
 
 clean:
 	ocamlbuild -clean
