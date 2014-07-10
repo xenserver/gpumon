@@ -87,7 +87,7 @@ CAMLprim value stub_nvml_open(value unit) {
 
     // Load nvmlDeviceGetPciInfo.
     interface->deviceGetPciInfo =
-        dlsym(interface->handle, "nvmlDeviceGetPciInfo");
+        dlsym(interface->handle, "nvmlDeviceGetPciInfo_v2");
     if(!interface->deviceGetPciInfo) {
         goto SymbolError;
     }
