@@ -1,6 +1,7 @@
 open Fun
+open Rrdd_plugin
 
-module Common = Rrdp_common.Common(struct let name = "xcp-rrdd-gpumon" end)
+module Process = Process(struct let name = "xcp-rrdd-gpumon" end)
 
 let nvidia_vendor_id = 0x10del
 
@@ -90,16 +91,16 @@ let load_config () =
 	match Config.of_file nvidia_config_path with
 	| `Ok config -> [nvidia_vendor_id, config]
 	| `Error `Does_not_exist ->
-		Common.D.error "Config file %s not found" nvidia_config_path;
-		Common.D.warn "Using default config";
+		Process.D.error "Config file %s not found" nvidia_config_path;
+		Process.D.warn "Using default config";
 		default_config
 	| `Error (`Parse_failure msg) ->
-		Common.D.error "Caught exception parsing config file: %s" msg;
-		Common.D.warn "Using default config";
+		Process.D.error "Caught exception parsing config file: %s" msg;
+		Process.D.warn "Using default config";
 		default_config
 	| `Error (`Unknown_version version) ->
-		Common.D.error "Unknown config file version: %s" version;
-		Common.D.warn "Using default config";
+		Process.D.error "Unknown config file version: %s" version;
+		Process.D.warn "Using default config";
 		default_config
 
 type gpu = {
@@ -155,23 +156,23 @@ let generate_gpu_dss interface gpu =
 			List.map
 				(function
 					| Config.Free ->
+						Rrd.Host,
 						Ds.ds_make
 							~name:("gpu_memory_free_" ^ gpu.bus_id_escaped)
 							~description:"Unallocated framebuffer memory"
 							~value:(Rrd.VT_Int64 memory_info.Nvml.free)
 							~ty:Rrd.Gauge
 							~default:false
-							~units:"B" (),
-						Rrd.Host
+							~units:"B" ()
 					| Config.Used ->
+						Rrd.Host,
 						Ds.ds_make
 							~name:("gpu_memory_used_" ^ gpu.bus_id_escaped)
 							~description:"Allocated framebuffer memory"
 							~value:(Rrd.VT_Int64 memory_info.Nvml.used)
 							~ty:Rrd.Gauge
 							~default:false
-							~units:"B" (),
-						Rrd.Host)
+							~units:"B" ())
 				metrics
 	in
 	let other_dss =
@@ -179,24 +180,24 @@ let generate_gpu_dss interface gpu =
 			(function
 				| Config.PowerUsage ->
 					let power_usage = Nvml.device_get_power_usage interface gpu.device in
+					Rrd.Host,
 					Ds.ds_make
 						~name:("gpu_power_usage_" ^ gpu.bus_id_escaped)
 						~description:"Power usage of this GPU"
 						~value:(Rrd.VT_Int64 (Int64.of_int power_usage))
 						~ty:Rrd.Gauge
 						~default:false
-						~units:"mW" (),
-					Rrd.Host
+						~units:"mW" ()
 				| Config.Temperature ->
 					let temperature = Nvml.device_get_temperature interface gpu.device in
+					Rrd.Host,
 					Ds.ds_make
 						~name:("gpu_temperature_" ^ gpu.bus_id_escaped)
 						~description:"Temperature of this GPU"
 						~value:(Rrd.VT_Int64 (Int64.of_int temperature))
 						~ty:Rrd.Gauge
 						~default:false
-						~units:"°C" (),
-					Rrd.Host)
+						~units:"°C" ())
 			gpu.other_metrics
 	in
 	let utilisation_dss =
@@ -208,6 +209,7 @@ let generate_gpu_dss interface gpu =
 			List.map
 				(function
 					| Config.Compute ->
+						Rrd.Host,
 						Ds.ds_make
 							~name:("gpu_utilisation_compute_" ^ gpu.bus_id_escaped)
 							~description:("Proportion of time over the past sample period during"^
@@ -217,9 +219,9 @@ let generate_gpu_dss interface gpu =
 							~default:false
 							~min:0.0
 							~max:1.0
-							~units:"(fraction)" (),
-						Rrd.Host
+							~units:"(fraction)" ()
 					| Config.MemoryIO ->
+						Rrd.Host,
 						Ds.ds_make
 							~name:("gpu_utilisation_memory_io_" ^ gpu.bus_id_escaped)
 							~description:("Proportion of time over the past sample period during"^
@@ -229,8 +231,7 @@ let generate_gpu_dss interface gpu =
 							~default:false
 							~min:0.0
 							~max:1.0
-							~units:"(fraction)" (),
-						Rrd.Host)
+							~units:"(fraction)" ())
 				metrics
 	in
 	List.fold_left
@@ -263,7 +264,7 @@ let close_nvml_interface interface =
 		(fun () -> Nvml.library_close interface)
 
 let () =
-	Common.initialise ();
+	Process.initialise ();
 	(* Try to open an interface to NVML. If this fails for an expected reason,
 	 * log the error, wait 5 minutes, then try again. *)
 	let interface =
@@ -272,27 +273,29 @@ let () =
 			with e ->
 				begin match e with
 					| Nvml.Library_not_loaded msg ->
-						Common.D.warn "NVML interface not loaded: %s" msg
+						Process.D.warn "NVML interface not loaded: %s" msg
 					| Nvml.Symbol_not_loaded msg ->
-						Common.D.warn "NVML missing expected symbol: %s" msg
+						Process.D.warn "NVML missing expected symbol: %s" msg
 					| e ->
 						(* This could just be that the NVIDIA driver is not running on
 						 * any devices; in this case NVML throws NVML_ERROR_UNKNOWN. *)
-						Common.D.warn
+						Process.D.warn
 							"Caught unexpected error initialising NVML: %s"
 							(Printexc.to_string e);
 				end;
-				Common.D.info "Sleeping for 5 minutes";
+				Process.D.info "Sleeping for 5 minutes";
 				Thread.delay 300.0;
 				open_if ()
 		in
 		open_if ()
 	in
-	Common.D.info "Opened NVML interface";
+	Process.D.info "Opened NVML interface";
 	try
 		let gpus = get_gpus interface in
-		Common.main_loop
-			~dss_f:(fun () -> generate_all_gpu_dss interface gpus)
+		Process.main_loop
 			~neg_shift:0.5
+			~target:Reporter.Local
+			~protocol:Rrd_interface.V2
+			~dss_f:(fun () -> generate_all_gpu_dss interface gpus)
 	with _ ->
 		close_nvml_interface interface
