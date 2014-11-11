@@ -1,8 +1,5 @@
-include $(B_BASE)/common.mk
-include $(B_BASE)/rpmbuild.mk
-
-IPROG=install -m 755
-IDATA=install -m 644
+DESTDIR ?= 
+LIBEXECDIR ?= /opt/xensource/libexec
 
 TESTS_FLAG=--enable-tests
 
@@ -28,6 +25,6 @@ clean:
 .PHONY: install
 install: build
 	mkdir -p $(DESTDIR)$(LIBEXECDIR)/xcp-rrdd-plugins/
-	$(IPROG) _build/gpumon/gpumon.native $(DESTDIR)$(LIBEXECDIR)/xcp-rrdd-plugins/xcp-rrdd-gpumon
+	install -m 755 _build/gpumon/gpumon.native $(DESTDIR)$(LIBEXECDIR)/xcp-rrdd-plugins/xcp-rrdd-gpumon
 	mkdir -p $(DESTDIR)/etc/rc.d/init.d
-	$(IPROG) scripts/init.d-rrdd-gpumon $(DESTDIR)/etc/rc.d/init.d/xcp-rrdd-gpumon
+	install -m 755 scripts/init.d-rrdd-gpumon $(DESTDIR)/etc/rc.d/init.d/xcp-rrdd-gpumon
