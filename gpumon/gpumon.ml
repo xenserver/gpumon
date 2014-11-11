@@ -115,7 +115,7 @@ type gpu = {
 (* Adding colons to datasource names confuses RRD parsers, so replace all
  * colons with "/" *)
 let escape_bus_id bus_id =
-	String.concat "/" (Stringext.String.split ':' bus_id)
+	String.concat "/" (Xstringext.String.split ':' bus_id)
 
 (** Get the list of devices recognised by NVML. *)
 let get_gpus interface =
