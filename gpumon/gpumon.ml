@@ -292,9 +292,12 @@ let () =
 	Process.D.info "Opened NVML interface";
 	try
 		let gpus = get_gpus interface in
+		(* Share one page per GPU - this is plenty for the six datasources per GPU
+		 * which we currently report. *)
+		let shared_page_count = List.length gpus in
 		Process.main_loop
 			~neg_shift:0.5
-			~target:Reporter.Local
+			~target:(Reporter.Local shared_page_count)
 			~protocol:Rrd_interface.V2
 			~dss_f:(fun () -> generate_all_gpu_dss interface gpus)
 	with _ ->
