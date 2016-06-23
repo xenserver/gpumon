@@ -1,3 +1,4 @@
+open Stdext
 open Fun
 open Rrdd_plugin
 

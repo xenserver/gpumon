@@ -1,3 +1,4 @@
+open Stdext
 open Fun
 open Result
 
