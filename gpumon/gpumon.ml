@@ -1,4 +1,3 @@
-open Fun
 open Rrdd_plugin
 
 module Process = Process(struct let name = "xcp-rrdd-gpumon" end)
@@ -115,7 +114,7 @@ type gpu = {
 (* Adding colons to datasource names confuses RRD parsers, so replace all
  * colons with "/" *)
 let escape_bus_id bus_id =
-	String.concat "/" (Xstringext.String.split ':' bus_id)
+	String.concat "/" (Stdext.Xstringext.String.split ':' bus_id)
 
 (** Get the list of devices recognised by NVML. *)
 let get_gpus interface =
@@ -259,7 +258,7 @@ let open_nvml_interface () =
 
 (** Shutdown and close an interface to the NVML library. *)
 let close_nvml_interface interface =
-	Pervasiveext.finally
+	Stdext.Pervasiveext.finally
 		(fun () -> Nvml.shutdown interface)
 		(fun () -> Nvml.library_close interface)
 
