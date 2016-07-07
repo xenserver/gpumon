@@ -261,11 +261,11 @@ let open_nvml_interface_noexn () =
 	with e ->
 		begin match e with
 			| Nvml.Library_not_loaded msg ->
-				Process.D.warn "NVML interface not loaded: %s" msg
+				Process.D.error "NVML interface not loaded: %s" msg
 			| Nvml.Symbol_not_loaded msg ->
-				Process.D.warn "NVML missing expected symbol: %s" msg
+				Process.D.error "NVML missing expected symbol: %s" msg
 			| e ->
-				Process.D.warn
+				Process.D.error
 					"Caught unexpected error initialising NVML: %s"
 					(Printexc.to_string e)
 		end;
