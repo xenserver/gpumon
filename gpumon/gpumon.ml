@@ -292,7 +292,9 @@ let () =
 				~target:(Reporter.Local shared_page_count)
 				~protocol:Rrd_interface.V2
 				~dss_f:(fun () -> generate_all_gpu_dss interface gpus)
-		with _ ->
+		with e ->
+			Process.D.error "Exiting due to unexpected exception: %s"
+				(Printexc.to_string e);
 			close_nvml_interface interface
 	end
 	| None ->
