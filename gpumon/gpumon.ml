@@ -256,6 +256,21 @@ let open_nvml_interface () =
 		Nvml.library_close interface;
 		raise e
 
+let open_nvml_interface_noexn () =
+	try Some (open_nvml_interface ())
+	with e ->
+		begin match e with
+			| Nvml.Library_not_loaded msg ->
+				Process.D.error "NVML interface not loaded: %s" msg
+			| Nvml.Symbol_not_loaded msg ->
+				Process.D.error "NVML missing expected symbol: %s" msg
+			| e ->
+				Process.D.error
+					"Caught unexpected error initialising NVML: %s"
+					(Printexc.to_string e)
+		end;
+		None
+
 (** Shutdown and close an interface to the NVML library. *)
 let close_nvml_interface interface =
 	Stdext.Pervasiveext.finally
@@ -264,40 +279,26 @@ let close_nvml_interface interface =
 
 let () =
 	Process.initialise ();
-	(* Try to open an interface to NVML. If this fails for an expected reason,
-	 * log the error, wait 5 minutes, then try again. *)
-	let interface =
-		let rec open_if () =
-			try open_nvml_interface ()
-			with e ->
-				begin match e with
-					| Nvml.Library_not_loaded msg ->
-						Process.D.warn "NVML interface not loaded: %s" msg
-					| Nvml.Symbol_not_loaded msg ->
-						Process.D.warn "NVML missing expected symbol: %s" msg
-					| e ->
-						(* This could just be that the NVIDIA driver is not running on
-						 * any devices; in this case NVML throws NVML_ERROR_UNKNOWN. *)
-						Process.D.warn
-							"Caught unexpected error initialising NVML: %s"
-							(Printexc.to_string e);
-				end;
-				Process.D.info "Sleeping for 5 minutes";
-				Thread.delay 300.0;
-				open_if ()
-		in
-		open_if ()
-	in
-	Process.D.info "Opened NVML interface";
-	try
-		let gpus = get_gpus interface in
-		(* Share one page per GPU - this is plenty for the six datasources per GPU
-		 * which we currently report. *)
-		let shared_page_count = List.length gpus in
-		Process.main_loop
-			~neg_shift:0.5
-			~target:(Reporter.Local shared_page_count)
-			~protocol:Rrd_interface.V2
-			~dss_f:(fun () -> generate_all_gpu_dss interface gpus)
-	with _ ->
-		close_nvml_interface interface
+	match open_nvml_interface_noexn () with
+	| Some interface -> begin
+		Process.D.info "Opened NVML interface";
+		try
+			let gpus = get_gpus interface in
+			(* Share one page per GPU - this is plenty for the six datasources per GPU
+			 * which we currently report. *)
+			let shared_page_count = List.length gpus in
+			Process.main_loop
+				~neg_shift:0.5
+				~target:(Reporter.Local shared_page_count)
+				~protocol:Rrd_interface.V2
+				~dss_f:(fun () -> generate_all_gpu_dss interface gpus)
+		with e ->
+			Process.D.error "Exiting due to unexpected exception: %s"
+				(Printexc.to_string e);
+			close_nvml_interface interface
+	end
+	| None ->
+		Process.D.info "Could not open NVML interface - sleeping forever";
+		while true do
+			Thread.delay 3600.0
+		done
