@@ -1,6 +1,6 @@
 open Stdext
 open Fun
-open Result
+open Gpumon_result
 
 (* Metrics which require calling nvmlDeviceGetMemoryInfo *)
 type memory_metric =
@@ -45,7 +45,7 @@ let metric_of_rpc = function
 	| rpc -> fail (`Parse_failure (Rpc.to_string rpc))
 
 let metrics_of_rpc = function
-	| Rpc.Enum metrics_rpc -> Result.map metric_of_rpc metrics_rpc
+	| Rpc.Enum metrics_rpc -> Gpumon_result.map metric_of_rpc metrics_rpc
 	| rpc -> fail (`Parse_failure (Rpc.to_string rpc))
 
 let rpc_of_metric metric = Rpc.String (string_of_metric metric)
@@ -96,7 +96,7 @@ let id_of_string str =
 	with Scanf.Scan_failure _ -> fail (`Parse_failure str)
 
 let of_v1_format dict =
-	Result.map
+	Gpumon_result.map
 		(fun (device_id_string, metrics_rpc) ->
 			(* Try to read the device ID. *)
 			(id_of_string device_id_string)
@@ -140,7 +140,7 @@ let device_type_of_v2_format = function
 	| rpc -> fail (`Parse_failure (Jsonrpc.to_string rpc))
 
 let device_types_of_v2_format = function
-	| Rpc.Enum items -> Result.map device_type_of_v2_format items
+	| Rpc.Enum items -> Gpumon_result.map device_type_of_v2_format items
 	| rpc -> fail (`Parse_failure (Jsonrpc.to_string rpc))
 
 let of_v2_format dict =
