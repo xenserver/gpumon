@@ -4,8 +4,8 @@ module Process = Process(struct let name = "xcp-rrdd-gpumon" end)
 
 let nvidia_vendor_id = 0x10del
 
-let default_config : (int32 * Config.config) list =
-	let open Config in [
+let default_config : (int32 * Gpumon_config.config) list =
+	let open Gpumon_config in [
 		(* NVIDIA Corporation *)
 		nvidia_vendor_id,
 		{
@@ -44,11 +44,11 @@ let categorise_metrics =
 	List.fold_left
 		(fun (memory_metrics, other_metrics, utilisation_metrics) metric ->
 			match metric with
-			| Config.Memory x ->
+			| Gpumon_config.Memory x ->
 				x :: memory_metrics, other_metrics, utilisation_metrics
-			| Config.Other x ->
+			| Gpumon_config.Other x ->
 				memory_metrics, x :: other_metrics, utilisation_metrics
-			| Config.Utilisation x ->
+			| Gpumon_config.Utilisation x ->
 				memory_metrics, other_metrics, x :: utilisation_metrics)
 		([], [], [])
 
@@ -65,7 +65,7 @@ let get_required_metrics config pci_info =
 	let subsystem_device_id =
 		Int32.shift_right_logical pci_info.Nvml.pci_subsystem_id 16 in
 	try
-		let open Config in
+		let open Gpumon_config in
 		let vendor_config = List.assoc vendor_id config in
 		let device =
 			List.find
@@ -87,10 +87,10 @@ let nvidia_config_path = "/usr/share/nvidia/monitoring.conf"
  *  See perf-tools.hg/scripts/monitoring.conf.example for an example of the
  *  expected config file format. *)
 let load_config () =
-	match Config.of_file nvidia_config_path with
+	match Gpumon_config.of_file nvidia_config_path with
 	| `Ok config -> [nvidia_vendor_id, config]
 	| `Error `Does_not_exist ->
-		Process.D.error "Config file %s not found" nvidia_config_path;
+		Process.D.error "Gpumon_config file %s not found" nvidia_config_path;
 		Process.D.warn "Using default config";
 		default_config
 	| `Error (`Parse_failure msg) ->
@@ -106,9 +106,9 @@ type gpu = {
 	device: Nvml.device;
 	bus_id: string;
 	bus_id_escaped: string;
-	memory_metrics: Config.memory_metric list;
-	utilisation_metrics: Config.utilisation_metric list;
-	other_metrics: Config.other_metric list;
+	memory_metrics: Gpumon_config.memory_metric list;
+	utilisation_metrics: Gpumon_config.utilisation_metric list;
+	other_metrics: Gpumon_config.other_metric list;
 }
 
 (* Adding colons to datasource names confuses RRD parsers, so replace all
@@ -154,7 +154,7 @@ let generate_gpu_dss interface gpu =
 			let memory_info = Nvml.device_get_memory_info interface gpu.device in
 			List.map
 				(function
-					| Config.Free ->
+					| Gpumon_config.Free ->
 						Rrd.Host,
 						Ds.ds_make
 							~name:("gpu_memory_free_" ^ gpu.bus_id_escaped)
@@ -163,7 +163,7 @@ let generate_gpu_dss interface gpu =
 							~ty:Rrd.Gauge
 							~default:false
 							~units:"B" ()
-					| Config.Used ->
+					| Gpumon_config.Used ->
 						Rrd.Host,
 						Ds.ds_make
 							~name:("gpu_memory_used_" ^ gpu.bus_id_escaped)
@@ -177,7 +177,7 @@ let generate_gpu_dss interface gpu =
 	let other_dss =
 		List.map
 			(function
-				| Config.PowerUsage ->
+				| Gpumon_config.PowerUsage ->
 					let power_usage = Nvml.device_get_power_usage interface gpu.device in
 					Rrd.Host,
 					Ds.ds_make
@@ -187,7 +187,7 @@ let generate_gpu_dss interface gpu =
 						~ty:Rrd.Gauge
 						~default:false
 						~units:"mW" ()
-				| Config.Temperature ->
+				| Gpumon_config.Temperature ->
 					let temperature = Nvml.device_get_temperature interface gpu.device in
 					Rrd.Host,
 					Ds.ds_make
@@ -207,7 +207,7 @@ let generate_gpu_dss interface gpu =
 				Nvml.device_get_utilization_rates interface gpu.device in
 			List.map
 				(function
-					| Config.Compute ->
+					| Gpumon_config.Compute ->
 						Rrd.Host,
 						Ds.ds_make
 							~name:("gpu_utilisation_compute_" ^ gpu.bus_id_escaped)
@@ -219,7 +219,7 @@ let generate_gpu_dss interface gpu =
 							~min:0.0
 							~max:1.0
 							~units:"(fraction)" ()
-					| Config.MemoryIO ->
+					| Gpumon_config.MemoryIO ->
 						Rrd.Host,
 						Ds.ds_make
 							~name:("gpu_utilisation_memory_io_" ^ gpu.bus_id_escaped)
