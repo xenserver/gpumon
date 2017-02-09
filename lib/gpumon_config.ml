@@ -1,6 +1,14 @@
 open Stdext
 open Fun
-open Result
+open Rresult
+
+(** Like List.map, but will return an Error if and when f returns an Error. *)
+let bind_map f items =
+  let rec aux acc = function
+    | item :: rest -> (f item) >>= (fun result -> aux (result :: acc) rest)
+    | [] -> Ok (List.rev acc)
+  in
+  aux [] items
 
 (* Metrics which require calling nvmlDeviceGetMemoryInfo *)
 type memory_metric =
@@ -24,13 +32,13 @@ type metric =
 
 let metric_of_string str =
 	match String.lowercase str with
-	| "memoryfree" -> return (Memory Free)
-	| "memoryused" -> return (Memory Used)
-	| "temperature" -> return (Other Temperature)
-	| "powerusage" -> return (Other PowerUsage)
-	| "compute" -> return (Utilisation Compute)
-	| "memoryio" -> return (Utilisation MemoryIO)
-	| _ -> fail (`Parse_failure str)
+	| "memoryfree" -> Ok (Memory Free)
+	| "memoryused" -> Ok (Memory Used)
+	| "temperature" -> Ok (Other Temperature)
+	| "powerusage" -> Ok (Other PowerUsage)
+	| "compute" -> Ok (Utilisation Compute)
+	| "memoryio" -> Ok (Utilisation MemoryIO)
+	| _ -> Error (`Parse_failure str)
 
 let string_of_metric = function
 	| Memory Free -> "memoryfree"
@@ -42,11 +50,11 @@ let string_of_metric = function
 
 let metric_of_rpc = function
 	| Rpc.String str -> metric_of_string str
-	| rpc -> fail (`Parse_failure (Rpc.to_string rpc))
+	| rpc -> Error (`Parse_failure (Rpc.to_string rpc))
 
 let metrics_of_rpc = function
-	| Rpc.Enum metrics_rpc -> Result.map metric_of_rpc metrics_rpc
-	| rpc -> fail (`Parse_failure (Rpc.to_string rpc))
+	| Rpc.Enum metrics_rpc -> bind_map metric_of_rpc metrics_rpc
+	| rpc -> Error (`Parse_failure (Rpc.to_string rpc))
 
 let rpc_of_metric metric = Rpc.String (string_of_metric metric)
 
@@ -74,29 +82,29 @@ let version_of_dict dict =
 	let version_key = "version" in
 	if List.mem_assoc version_key dict then begin
 		match List.assoc version_key dict with
-		| Rpc.String "2" -> return V2
-		| rpc -> fail (`Unknown_version (Jsonrpc.to_string rpc))
+		| Rpc.String "2" -> Ok V2
+		| rpc -> Error (`Unknown_version (Jsonrpc.to_string rpc))
 	end else
-		return V1
+		Ok V1
 
 let unbox_string = function
-	| Rpc.String str -> return str
-	| rpc -> fail (`Parse_failure (Jsonrpc.to_string rpc))
+	| Rpc.String str -> Ok str
+	| rpc -> Error (`Parse_failure (Jsonrpc.to_string rpc))
 
 let unbox_enum = function
-	| Rpc.Enum enum -> return enum
-	| rpc -> fail (`Parse_failure (Jsonrpc.to_string rpc))
+	| Rpc.Enum enum -> Ok enum
+	| rpc -> Error (`Parse_failure (Jsonrpc.to_string rpc))
 
 let lookup key dict =
-	try return (List.assoc key dict)
-	with Not_found -> fail (`Parse_failure (Rpc.Dict dict |> Jsonrpc.to_string))
+	try Ok (List.assoc key dict)
+	with Not_found -> Error (`Parse_failure (Rpc.Dict dict |> Jsonrpc.to_string))
 
 let id_of_string str =
-	try return (Scanf.sscanf str "%lx" (fun x -> x))
-	with Scanf.Scan_failure _ -> fail (`Parse_failure str)
+	try Ok (Scanf.sscanf str "%lx" (fun x -> x))
+	with Scanf.Scan_failure _ -> Error (`Parse_failure str)
 
 let of_v1_format dict =
-	Result.map
+	bind_map
 		(fun (device_id_string, metrics_rpc) ->
 			(* Try to read the device ID. *)
 			(id_of_string device_id_string)
@@ -106,13 +114,13 @@ let of_v1_format dict =
 			(* Return the constructed device type.
 			 * n.b. The V1 format doesn't support specifying a subsystem device ID. *)
 			>>= (fun metrics ->
-				return {
+				Ok {
 					device_id;
 					subsystem_device_id = Any;
 					metrics;
 				})))
 		dict
-	>|= (fun device_types -> {device_types})
+	>>| (fun device_types -> {device_types})
 
 let device_type_of_v2_format = function
 	| Rpc.Dict dict -> begin
@@ -124,29 +132,29 @@ let device_type_of_v2_format = function
 			(if List.mem_assoc "subsystem_device_id" dict
 			then
 				(List.assoc "subsystem_device_id" dict |> unbox_string >>= id_of_string)
-				>>= (fun id -> return (Match id))
-			else return Any)
+				>>= (fun id -> Ok (Match id))
+			else Ok Any)
 		(* Try to read the list of metrics. *)
 		>>= (fun subsystem_device_id ->
 			(lookup "metrics" dict >>= metrics_of_rpc)
 		(* Return the constructed device type. *)
 		>>= (fun metrics ->
-			return {
+			Ok {
 				device_id;
 				subsystem_device_id;
 				metrics;
 			})))
 	end
-	| rpc -> fail (`Parse_failure (Jsonrpc.to_string rpc))
+	| rpc -> Error (`Parse_failure (Jsonrpc.to_string rpc))
 
 let device_types_of_v2_format = function
-	| Rpc.Enum items -> Result.map device_type_of_v2_format items
-	| rpc -> fail (`Parse_failure (Jsonrpc.to_string rpc))
+	| Rpc.Enum items -> bind_map device_type_of_v2_format items
+	| rpc -> Error (`Parse_failure (Jsonrpc.to_string rpc))
 
 let of_v2_format dict =
 	lookup "device_types" dict
 	>>= device_types_of_v2_format
-	>>= (fun device_types -> return {device_types})
+	>>= (fun device_types -> Ok {device_types})
 
 let of_rpc = function
 	| Rpc.Dict dict ->
@@ -154,16 +162,16 @@ let of_rpc = function
 		>>= (function
 			| V1 -> of_v1_format dict
 			| V2 -> of_v2_format dict)
-	| _ -> fail (`Parse_failure "No top-level dictionary")
+	| _ -> Error (`Parse_failure "No top-level dictionary")
 
 let of_string data =
-	(try return (Jsonrpc.of_string data)
-	with e -> fail (`Parse_failure (Printexc.to_string e)))
+	(try Ok (Jsonrpc.of_string data)
+	with e -> Error (`Parse_failure (Printexc.to_string e)))
 	>>= of_rpc
 
 let of_file path =
 	if Sys.file_exists path then Unixext.string_of_file path |> of_string
-	else fail `Does_not_exist
+	else Error `Does_not_exist
 
 let to_string config =
 	Rpc.Dict
