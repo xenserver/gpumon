@@ -1,4 +1,4 @@
-OASISFormat:               0.3
+OASISFormat:               0.4
 Name:                      gpumon
 Version:                   0.2.0
 Synopsis:                  RRDD GPU metrics plugin
@@ -10,7 +10,7 @@ Library gpumon_libs
   CompiledObject:          best
   Path:                    lib
   Findlibname:             gpumon-libs
-  Modules:                 Result, Config, Nvml
+  Modules:                 Result, Gpumon_config, Nvml
   CSources:                nvml_stubs.c
   BuildDepends:            threads, stdext, rpclib
 

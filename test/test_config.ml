@@ -5,17 +5,17 @@ let string_of_result = function
 	| `Error (`Unknown_version version) ->
 		Printf.sprintf "Unknown_version %s" version
 	| `Error `Does_not_exist -> "Does_not_exist"
-	| `Ok config -> Printf.sprintf "Ok %s" (Config.to_string config)
+	| `Ok config -> Printf.sprintf "Ok %s" (Gpumon_config.to_string config)
 
 let test_file config_file expected_result =
 	let config_file_path = Filename.concat "test/data" config_file in
-	let actual_result = Config.of_file config_file_path in
+	let actual_result = Gpumon_config.of_file config_file_path in
 	assert_equal ~msg:"Unexpected result from read_config_file"
 		~printer:string_of_result
 		expected_result actual_result
 
 let default_config =
-	let open Config in
+	let open Gpumon_config in
 	{
 		device_types = [
 			(* GRID K1 *)
@@ -48,7 +48,7 @@ let default_config =
 	}
 
 let default_with_match_config =
-	let open Config in
+	let open Gpumon_config in
 	{
 		device_types = [
 			(* GRID K1 *)
@@ -81,7 +81,7 @@ let default_with_match_config =
 	}
 
 let subsystem_device_id_config =
-	let open Config in
+	let open Gpumon_config in
 	{
 		device_types = [
 			{
@@ -96,7 +96,7 @@ let subsystem_device_id_config =
 	}
 
 let v2_mixed_config =
-	let open Config in
+	let open Gpumon_config in
 	{
 		device_types = [
 			{
@@ -119,7 +119,7 @@ let v2_mixed_config =
 	}
 
 let tests =
-	let open Config in
+	let open Gpumon_config in
 	[
 		"test_does_not_exist.conf", `Error `Does_not_exist;
 		"test_unknown_version.conf", `Error (`Unknown_version "\"4\"");
