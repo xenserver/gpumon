@@ -90,7 +90,7 @@ let load_config () =
 	match Gpumon_config.of_file nvidia_config_path with
 	| `Ok config -> [nvidia_vendor_id, config]
 	| `Error `Does_not_exist ->
-		Process.D.error "Gpumon_config file %s not found" nvidia_config_path;
+		Process.D.error "Config file %s not found" nvidia_config_path;
 		Process.D.warn "Using default config";
 		default_config
 	| `Error (`Parse_failure msg) ->
