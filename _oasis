@@ -1,4 +1,4 @@
-OASISFormat:               0.3
+OASISFormat:               0.4
 Name:                      gpumon
 Version:                   0.2.0
 Synopsis:                  RRDD GPU metrics plugin
