@@ -1,11 +1,13 @@
 open OUnit
 
-let string_of_result = function
-	| `Error (`Parse_failure msg) -> Printf.sprintf "Parse_failure %s" msg
-	| `Error (`Unknown_version version) ->
+let string_of_result =
+  let open Rresult in
+  function
+	| Error (`Parse_failure msg) -> Printf.sprintf "Parse_failure %s" msg
+	| Error (`Unknown_version version) ->
 		Printf.sprintf "Unknown_version %s" version
-	| `Error `Does_not_exist -> "Does_not_exist"
-	| `Ok config -> Printf.sprintf "Ok %s" (Gpumon_config.to_string config)
+	| Error `Does_not_exist -> "Does_not_exist"
+	| Ok config -> Printf.sprintf "Ok %s" (Gpumon_config.to_string config)
 
 let test_file config_file expected_result =
 	let config_file_path = Filename.concat "test/data" config_file in
@@ -120,16 +122,17 @@ let v2_mixed_config =
 
 let tests =
 	let open Gpumon_config in
+  let open Rresult in
 	[
-		"test_does_not_exist.conf", `Error `Does_not_exist;
-		"test_unknown_version.conf", `Error (`Unknown_version "\"4\"");
-		"test_v1_minimal.conf", `Ok {device_types = []};
-		"test_v2_minimal.conf", `Ok {device_types = []};
-		"test_v1_default.conf", `Ok default_config;
-		"test_v2_default.conf", `Ok default_config;
-		"test_v2_default_with_match.conf", `Ok default_with_match_config;
-		"test_v2_with_subsystem_device_id.conf", `Ok subsystem_device_id_config;
-		"test_v2_mixed.conf", `Ok v2_mixed_config;
+		"test_does_not_exist.conf", Error `Does_not_exist;
+		"test_unknown_version.conf", Error (`Unknown_version "\"4\"");
+		"test_v1_minimal.conf", Ok {device_types = []};
+		"test_v2_minimal.conf", Ok {device_types = []};
+		"test_v1_default.conf", Ok default_config;
+		"test_v2_default.conf", Ok default_config;
+		"test_v2_default_with_match.conf", Ok default_with_match_config;
+		"test_v2_with_subsystem_device_id.conf", Ok subsystem_device_id_config;
+		"test_v2_mixed.conf", Ok v2_mixed_config;
 	]
 
 let test =

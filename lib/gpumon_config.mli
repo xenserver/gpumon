@@ -36,13 +36,13 @@ val of_string : string ->
 	(config, [
 		| `Parse_failure of string
 		| `Unknown_version of string
-	]) Result.t
+	]) Rresult.result
 
 val of_file : string ->
 	(config, [
 		| `Parse_failure of string
 		| `Unknown_version of string
 		| `Does_not_exist
-	]) Result.t
+	]) Rresult.result
 
 val to_string : config -> string
