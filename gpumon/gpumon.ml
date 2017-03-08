@@ -87,17 +87,18 @@ let nvidia_config_path = "/usr/share/nvidia/monitoring.conf"
  *  See perf-tools.hg/scripts/monitoring.conf.example for an example of the
  *  expected config file format. *)
 let load_config () =
+  let open Rresult in
 	match Gpumon_config.of_file nvidia_config_path with
-	| `Ok config -> [nvidia_vendor_id, config]
-	| `Error `Does_not_exist ->
+	| Ok config -> [nvidia_vendor_id, config]
+	| Error `Does_not_exist ->
 		Process.D.error "Config file %s not found" nvidia_config_path;
 		Process.D.warn "Using default config";
 		default_config
-	| `Error (`Parse_failure msg) ->
+	| Error (`Parse_failure msg) ->
 		Process.D.error "Caught exception parsing config file: %s" msg;
 		Process.D.warn "Using default config";
 		default_config
-	| `Error (`Unknown_version version) ->
+	| Error (`Unknown_version version) ->
 		Process.D.error "Unknown config file version: %s" version;
 		Process.D.warn "Using default config";
 		default_config
