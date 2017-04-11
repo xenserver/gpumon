@@ -303,3 +303,10 @@ let () =
 		while true do
 			Thread.delay 3600.0
 		done
+
+let get_pgpu_metadata debug_info pgpu_address =
+        "hello, im some pgpu metadata :D"
+
+let get_pgpu_vm_compatibility debug_info pgpu_metadata dom_id =
+        []
+
