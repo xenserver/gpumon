@@ -19,7 +19,7 @@ Executable gpumon
   Path:                    gpumon
   MainIs:                  gpumon.ml
   Install:                 false
-  BuildDepends:            gpumon-libs, threads, stdext, rrdd-plugin
+  BuildDepends:            gpumon-libs, threads, stdext, rrdd-plugin, xcp.gpumon
 
 Executable test_main
   Build$:                  flag(tests)

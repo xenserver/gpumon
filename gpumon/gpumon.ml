@@ -279,10 +279,18 @@ let close_nvml_interface interface =
 		(fun () -> Nvml.library_close interface)
 
 let () =
+	let module Server = Gpumon_interface.Server(Gpumon_server) in
+
 	Process.initialise ();
 	match open_nvml_interface_noexn () with
 	| Some interface -> begin
 		Process.D.info "Opened NVML interface";
+		let server = Xcp_service.make
+			~path:Gpumon_interface.xml_path
+			~queue_name:Gpumon_interface.queue_name
+			~rpc_fn:(Server.process ())
+			() in
+		let _ = Thread.create Xcp_service.serve_forever server in
 		try
 			let gpus = get_gpus interface in
 			(* Share one page per GPU - this is plenty for the six datasources per GPU
@@ -303,3 +311,4 @@ let () =
 		while true do
 			Thread.delay 3600.0
 		done
+
