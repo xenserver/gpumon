@@ -1,6 +1,9 @@
 #include <dlfcn.h>
 
 #include <nvml.h>
+#include <nvml_grid.h>
+
+#include <string.h>
 
 #include <caml/alloc.h>
 #include <caml/callback.h>
@@ -15,6 +18,7 @@ typedef struct nvmlInterface {
     nvmlReturn_t (*shutdown)(void);
     nvmlReturn_t (*deviceGetCount)(unsigned int*);
     nvmlReturn_t (*deviceGetHandleByIndex)(unsigned int, nvmlDevice_t*);
+    nvmlReturn_t (*deviceGetHandleByPciBusId)(const char*, nvmlDevice_t*);
     nvmlReturn_t (*deviceGetMemoryInfo)(nvmlDevice_t, nvmlMemory_t*);
     nvmlReturn_t (*deviceGetPciInfo)(nvmlDevice_t, nvmlPciInfo_t*);
     nvmlReturn_t (*deviceGetTemperature)
@@ -23,6 +27,12 @@ typedef struct nvmlInterface {
     nvmlReturn_t (*deviceGetUtilizationRates)(nvmlDevice_t, nvmlUtilization_t*);
 
     nvmlReturn_t (*deviceSetPersistenceMode)(nvmlDevice_t, nvmlEnableState_t);
+    
+    nvmlReturn_t (*deviceGetVgpuMetadata)(nvmlDevice_t, nvmlVgpuPgpuMetadata_t*, unsigned int*);
+    nvmlReturn_t (*vgpuInstanceGetMetadata)(nvmlVgpuInstance_t, nvmlVgpuMetadata_t*, unsigned int*);
+    nvmlReturn_t (*deviceGetActiveVgpus)(nvmlDevice_t, unsigned int*, nvmlVgpuInstance_t*);
+    nvmlReturn_t (*vgpuInstanceGetVmID)(nvmlVgpuInstance_t, char*, unsigned int, nvmlVgpuVmIdType_t*);
+    nvmlReturn_t (*getVgpuCompatibility)(nvmlVgpuMetadata_t*, nvmlVgpuPgpuMetadata_t*, nvmlVgpuPgpuCompatibility_t*);
 } nvmlInterface;
 
 CAMLprim value stub_nvml_open(value unit) {
@@ -78,6 +88,14 @@ CAMLprim value stub_nvml_open(value unit) {
         goto SymbolError;
     }
 
+    // Load nvmlDeviceGetHandleByPciBusId
+    interface->deviceGetHandleByPciBusId =
+        dlsym(interface->handle, "nvmlDeviceGetHandleByPciBusId");
+    if(!interface->deviceGetHandleByPciBusId) {
+        goto SymbolError;
+    }
+
+
     // Load nvmlDeviceGetMemoryInfo.
     interface->deviceGetMemoryInfo =
         dlsym(interface->handle, "nvmlDeviceGetMemoryInfo");
@@ -119,6 +137,42 @@ CAMLprim value stub_nvml_open(value unit) {
     if(!interface->deviceSetPersistenceMode) {
         goto SymbolError;
     }
+
+    // Load nvmlDeviceGetVgpuMetadata.
+    interface->deviceGetVgpuMetadata =
+        dlsym(interface->handle, "nvmlDeviceGetVgpuMetadata");
+    if(!interface->deviceGetVgpuMetadata) {
+        goto SymbolError;
+    }
+
+    // Load nvmlVgpuInstanceGetMetadata.
+    interface->vgpuInstanceGetMetadata =
+        dlsym(interface->handle, "nvmlVgpuInstanceGetMetadata");
+    if(!interface->vgpuInstanceGetMetadata) {
+        goto SymbolError;
+    }
+
+    // Load nvmlDeviceGetActiveVgpus.
+    interface->deviceGetActiveVgpus =
+        dlsym(interface->handle, "nvmlDeviceGetActiveVgpus");
+    if(!interface->deviceGetActiveVgpus) {
+        goto SymbolError;
+    }
+
+    // Load nvmlVgpuInstanceGetVmID.
+    interface->vgpuInstanceGetVmID =
+        dlsym(interface->handle, "nvmlVgpuInstanceGetVmID");
+    if(!interface->vgpuInstanceGetVmID) {
+        goto SymbolError;
+    }
+
+    // Load nvmlGetVgpuCompatibility.
+    interface->getVgpuCompatibility =
+        dlsym(interface->handle, "nvmlGetVgpuCompatibility");
+    if(!interface->getVgpuCompatibility) {
+        goto SymbolError;
+    }
+
 
     ml_interface = (value)interface;
     CAMLreturn(ml_interface);
@@ -192,19 +246,50 @@ CAMLprim value stub_nvml_device_get_handle_by_index(
         value ml_interface,
         value ml_index) {
     CAMLparam2(ml_interface, ml_index);
+    CAMLlocal1(ml_device);
+
     nvmlReturn_t error;
     nvmlInterface* interface;
     unsigned int index;
-    nvmlDevice_t* device;
+    nvmlDevice_t device;
 
-    device = malloc(sizeof(nvmlDevice_t));
     interface = (nvmlInterface*)ml_interface;
     index = Int_val(ml_index);
-    error = interface->deviceGetHandleByIndex(index, device);
+    error = interface->deviceGetHandleByIndex(index, &device);
     check_error(interface, error);
 
-    CAMLreturn((value)device);
+    unsigned int deviceSize = sizeof(nvmlDevice_t);
+    ml_device = caml_alloc_string(deviceSize);
+    memcpy(String_val(ml_device),
+        &device, deviceSize);
+
+    CAMLreturn(ml_device);
 }
+
+CAMLprim value stub_nvml_device_get_handle_by_pci_bus_id(
+        value ml_interface,
+        value ml_pci_bus_id) {
+    CAMLparam2(ml_interface, ml_pci_bus_id);
+    CAMLlocal1(ml_device);
+
+    nvmlReturn_t error;
+    nvmlInterface* interface;
+    char* pciBusId;
+    nvmlDevice_t device;
+
+    interface = (nvmlInterface*)ml_interface;
+    pciBusId = String_val(ml_pci_bus_id);
+    error = interface->deviceGetHandleByPciBusId(pciBusId, &device);
+    check_error(interface, error);
+    
+    unsigned int deviceSize = sizeof(nvmlDevice_t);
+    ml_device = caml_alloc_string(deviceSize);
+    memcpy(String_val(ml_device),
+        &device, deviceSize);
+
+    CAMLreturn(ml_device);
+}
+
 
 CAMLprim value stub_nvml_device_get_memory_info(
         value ml_interface,
@@ -331,4 +416,296 @@ CAMLprim value stub_nvml_device_set_persistence_mode(
     check_error(interface, error);
 
     CAMLreturn(Val_unit);
+}
+
+
+CAMLprim value stub_nvml_device_get_pgpu_metadata(
+        value ml_interface, 
+        value ml_device) {
+    CAMLparam2(ml_interface, ml_device);
+    CAMLlocal1(ml_pgpu_metadata);
+    nvmlReturn_t error;
+    nvmlInterface* interface;
+    nvmlDevice_t device;
+    unsigned int pgpuMetadataSize = 0;
+    nvmlVgpuPgpuMetadata_t* pgpuMetadata = NULL;
+
+    interface = (nvmlInterface*)ml_interface;
+    device = *(nvmlDevice_t*)ml_device;
+
+    // Get metadata dynamically increasing the buffer size
+    int dummy;
+    do {
+        error = interface->deviceGetVgpuMetadata(
+            device,
+            (pgpuMetadata)?pgpuMetadata:(nvmlVgpuPgpuMetadata_t*) &dummy,
+            &pgpuMetadataSize);
+        if ((error == NVML_ERROR_INSUFFICIENT_SIZE) && (pgpuMetadataSize > 0)) {
+            if (pgpuMetadata) { free(pgpuMetadata); }
+            pgpuMetadata = (nvmlVgpuPgpuMetadata_t*) malloc(pgpuMetadataSize);
+            if (!pgpuMetadata) { check_error(interface, NVML_ERROR_MEMORY); }
+        }
+    } while ((error == NVML_ERROR_INSUFFICIENT_SIZE) && (pgpuMetadataSize > 0));
+    if (error != NVML_SUCCESS) {
+        free(pgpuMetadata);
+        check_error(interface, error);
+    }
+
+    ml_pgpu_metadata = caml_alloc_string(pgpuMetadataSize);
+    memcpy(String_val(ml_pgpu_metadata), pgpuMetadata, pgpuMetadataSize);
+    free(pgpuMetadata);
+
+    CAMLreturn(ml_pgpu_metadata);
+}
+
+CAMLprim value stub_pgpu_metadata_get_pgpu_version(value ml_pgpu_metadata) {
+    CAMLparam1(ml_pgpu_metadata);
+    nvmlVgpuPgpuMetadata_t pgpuMetadata;
+    pgpuMetadata = *(nvmlVgpuPgpuMetadata_t*)ml_pgpu_metadata;
+    CAMLreturn(Val_int(pgpuMetadata.version));
+}
+
+CAMLprim value stub_pgpu_metadata_get_pgpu_revision(value ml_pgpu_metadata) {
+    CAMLparam1(ml_pgpu_metadata);
+    nvmlVgpuPgpuMetadata_t pgpuMetadata;
+    pgpuMetadata = *(nvmlVgpuPgpuMetadata_t*)ml_pgpu_metadata;
+    CAMLreturn(Val_int(pgpuMetadata.revision));
+}
+
+CAMLprim value stub_pgpu_metadata_get_pgpu_host_driver_version(value ml_pgpu_metadata) {
+    CAMLparam1(ml_pgpu_metadata);
+    nvmlVgpuPgpuMetadata_t pgpuMetadata;
+    pgpuMetadata = *(nvmlVgpuPgpuMetadata_t*)ml_pgpu_metadata;
+    CAMLreturn(caml_copy_string(pgpuMetadata.hostDriverVersion));
+}
+
+
+CAMLprim value stub_nvml_device_get_active_vgpus(
+        value ml_interface,
+        value ml_device) {
+    CAMLparam2(ml_interface, ml_device);
+    CAMLlocal2(tail, cons);
+
+    nvmlReturn_t error;
+    nvmlInterface* interface;
+    nvmlDevice_t device;
+    
+    unsigned int vgpuCount = 0;
+    nvmlVgpuInstance_t* vgpuInstances = NULL;
+    
+    interface = (nvmlInterface*)ml_interface;
+    device = *(nvmlDevice_t*)ml_device;
+
+    // Get instances dynamically increasing the buffer size
+    int dummy;
+    do {
+        error = interface->deviceGetActiveVgpus(
+            device,
+            &vgpuCount, 
+            (vgpuInstances)?vgpuInstances:(nvmlVgpuInstance_t*) &dummy);
+        if ((error == NVML_ERROR_INSUFFICIENT_SIZE) && (vgpuCount > 0)) {
+            if (vgpuInstances) { free(vgpuInstances); }
+            vgpuInstances = (nvmlVgpuInstance_t*) malloc(sizeof(nvmlVgpuInstance_t)*vgpuCount);
+            if (!vgpuInstances) { check_error(interface, NVML_ERROR_MEMORY); }
+        }
+    } while ((error == NVML_ERROR_INSUFFICIENT_SIZE) && (vgpuCount > 0));
+    if (error != NVML_SUCCESS) {
+        free(vgpuInstances);
+        check_error(interface, error);
+    }
+    // Pack the vgpu instances in an OCaml list
+    tail = Val_emptylist;
+
+    int i;
+    for (i = vgpuCount-1; i >= 0; i--) {
+        cons = caml_alloc(2, 0);
+        Store_field(cons, 0, Val_int(vgpuInstances[i]));
+        Store_field(cons, 1, tail);
+        tail = cons;
+    }
+
+    free(vgpuInstances);
+    CAMLreturn(tail);
+}
+
+CAMLprim value stub_nvml_vgpu_instance_get_vm_id(
+        value ml_interface,
+        value ml_vgpu_instance) {
+    CAMLparam2(ml_interface, ml_vgpu_instance);
+    CAMLlocal1(ml_vm_id);
+
+    nvmlReturn_t error;
+    nvmlInterface* interface;
+    nvmlVgpuInstance_t vgpuInstance;
+    
+    // The VM ID is returned as a string,
+    // not exceeding 80 characters in length (including the NUL terminator).
+    char vmID[80];
+    nvmlVgpuVmIdType_t *vmIdType;
+
+    interface = (nvmlInterface*)ml_interface;
+    vgpuInstance = (nvmlVgpuInstance_t)Int_val(ml_vgpu_instance);
+    
+    vmIdType = (nvmlVgpuVmIdType_t*) malloc(sizeof(nvmlVgpuVmIdType_t));
+    if (!vmIdType) {
+        check_error(interface, NVML_ERROR_MEMORY);
+    }
+
+    error = interface->vgpuInstanceGetVmID(
+        vgpuInstance, vmID, 80, vmIdType);
+    if (error != NVML_SUCCESS) {
+        free(vmIdType);
+        check_error(interface, error);
+    }
+
+    ml_vm_id = caml_copy_string(vmID);
+
+    free(vmIdType);
+
+    CAMLreturn(ml_vm_id);
+}
+
+// get relevant metadata about a running vGPU
+// returns compatibility information and an indication about what is the
+// limiting factor in nvmlVgpuPgpuCompatibility_t
+CAMLprim value stub_nvml_get_pgpu_vgpu_compatibility(
+        value ml_interface,
+        value ml_vgpu_instance,
+        value ml_pgpu_metadata) {
+    CAMLparam3(ml_interface, ml_vgpu_instance, ml_pgpu_metadata);
+    CAMLlocal1(ml_vgpu_pgpu_compat_meta);
+    nvmlReturn_t error;
+    nvmlInterface* interface;
+    nvmlVgpuPgpuMetadata_t* pgpuMetadata;
+    nvmlVgpuInstance_t vgpuInstance;
+    nvmlVgpuPgpuCompatibility_t vgpuCompatibility; 
+
+    unsigned int vgpuMetadataSize = 0;
+    nvmlVgpuMetadata_t* vgpuMetadata = NULL;
+
+    interface = (nvmlInterface*)ml_interface;
+    vgpuInstance = (nvmlVgpuInstance_t)Int_val(ml_vgpu_instance);
+    pgpuMetadata = (nvmlVgpuPgpuMetadata_t*)ml_pgpu_metadata;
+
+    // Get metadata dynamically increasing the buffer size
+    int dummy;
+    do {
+        error = interface->vgpuInstanceGetMetadata(
+            vgpuInstance,
+            (vgpuMetadata)?vgpuMetadata:(nvmlVgpuMetadata_t*) &dummy,
+            &vgpuMetadataSize);
+        if ((error == NVML_ERROR_INSUFFICIENT_SIZE) && (vgpuMetadataSize > 0)) {
+            if (vgpuMetadata) { free(vgpuMetadata); }
+            vgpuMetadata = (nvmlVgpuMetadata_t*) malloc(vgpuMetadataSize);
+            if (!vgpuMetadata) { check_error(interface, NVML_ERROR_MEMORY); }
+        }
+    } while ((error == NVML_ERROR_INSUFFICIENT_SIZE) && (vgpuMetadataSize > 0));
+    if (error != NVML_SUCCESS) {
+        free(vgpuMetadata);
+        check_error(interface, error);
+    }
+
+    error = interface->getVgpuCompatibility(
+        vgpuMetadata,
+        pgpuMetadata, 
+        &vgpuCompatibility);
+    free(vgpuMetadata);
+    check_error(interface, error);
+
+    unsigned int compatSize = sizeof(nvmlVgpuPgpuCompatibility_t);
+    ml_vgpu_pgpu_compat_meta = caml_alloc_string(compatSize);
+    memcpy(String_val(ml_vgpu_pgpu_compat_meta),
+        &vgpuCompatibility, compatSize);
+
+    CAMLreturn(ml_vgpu_pgpu_compat_meta);
+}
+
+CAMLprim value stub_vgpu_compat_get_vm_compat(value ml_vgpu_compat) {
+    CAMLparam1(ml_vgpu_compat);
+    CAMLlocal2(tail, cons);
+    nvmlVgpuPgpuCompatibility_t* vgpuCompatibility;
+    int mask;
+
+    vgpuCompatibility = (nvmlVgpuPgpuCompatibility_t*)ml_vgpu_compat;
+    mask = vgpuCompatibility->vgpuVmCompatibility;
+
+    tail = Val_emptylist;
+
+    if (mask == NVML_VGPU_VM_COMPATIBILITY_NONE) {
+        cons = caml_alloc(2, 0);
+        Store_field(cons, 0, Val_int(0));
+        Store_field(cons, 1, tail);
+        tail = cons;
+    }
+    if (mask & NVML_VGPU_VM_COMPATIBILITY_COLD) {
+        cons = caml_alloc(2, 0);
+        Store_field(cons, 0, Val_int(1));
+        Store_field(cons, 1, tail);
+        tail = cons;
+    }
+    if (mask & NVML_VGPU_VM_COMPATIBILITY_HIBERNATE) {
+        cons = caml_alloc(2, 0);
+        Store_field(cons, 0, Val_int(2));
+        Store_field(cons, 1, tail);
+        tail = cons;
+    }
+    if (mask & NVML_VGPU_VM_COMPATIBILITY_SLEEP) {
+        cons = caml_alloc(2, 0);
+        Store_field(cons, 0, Val_int(3));
+        Store_field(cons, 1, tail);
+        tail = cons;
+    }
+    if (mask & NVML_VGPU_VM_COMPATIBILITY_LIVE) {
+        cons = caml_alloc(2, 0);
+        Store_field(cons, 0, Val_int(4));
+        Store_field(cons, 1, tail);
+        tail = cons;
+    }
+
+    CAMLreturn(tail);
+}
+
+CAMLprim value stub_vgpu_compat_get_pgpu_compat_limit(value ml_vgpu_compat) {
+    CAMLparam1(ml_vgpu_compat);
+    CAMLlocal2(tail, cons);
+    nvmlVgpuPgpuCompatibility_t* vgpuCompatibility;
+    int mask;
+
+    vgpuCompatibility = (nvmlVgpuPgpuCompatibility_t*)ml_vgpu_compat;
+    mask = vgpuCompatibility->compatibilityLimitCode;
+
+    tail = Val_emptylist;
+
+    if (mask == NVML_VGPU_COMPATIBILITY_LIMIT_NONE) {
+        cons = caml_alloc(2, 0);
+        Store_field(cons, 0, Val_int(0));
+        Store_field(cons, 1, tail);
+        tail = cons;
+    }
+    if (mask & NVML_VGPU_COMPATIBILITY_LIMIT_HOST_DRIVER) {
+        cons = caml_alloc(2, 0);
+        Store_field(cons, 0, Val_int(1));
+        Store_field(cons, 1, tail);
+        tail = cons;
+    }
+    if (mask & NVML_VGPU_COMPATIBILITY_LIMIT_GUEST_DRIVER) {
+        cons = caml_alloc(2, 0);
+        Store_field(cons, 0, Val_int(2));
+        Store_field(cons, 1, tail);
+        tail = cons;
+    }
+    if (mask & NVML_VGPU_COMPATIBILITY_LIMIT_GPU) {
+        cons = caml_alloc(2, 0);
+        Store_field(cons, 0, Val_int(3));
+        Store_field(cons, 1, tail);
+        tail = cons;
+    }
+    if (mask & NVML_VGPU_COMPATIBILITY_LIMIT_OTHER) {
+        cons = caml_alloc(2, 0);
+        Store_field(cons, 0, Val_int(4));
+        Store_field(cons, 1, tail);
+        tail = cons;
+    }
+
+    CAMLreturn(tail);
 }
