@@ -95,3 +95,22 @@ external vgpu_compat_get_vm_compat: vgpu_compatibility_t -> vm_compat list =
 external vgpu_compat_get_pgpu_compat_limit: vgpu_compatibility_t -> pgpu_compat_limit list =
 	"stub_vgpu_compat_get_pgpu_compat_limit"
 
+(* The functions below could raise any of the nvml errors raised from the stubs *)
+let get_vgpus_for_vm iface device vm_domid =
+	let vgpus = device_get_active_vgpus iface device in
+	let open Stdext.Listext in
+	List.filter_map (fun vgpu ->
+		match vgpu_instance_get_vm_domid iface vgpu with 
+		| domid when domid = vm_domid -> Some vgpu
+		| _ -> None) vgpus
+
+let get_pgpu_vgpu_compatibility iface device vm_domid pgpu_metadata =
+	let vgpu_to_compat vgpu =
+		let vgpu_compat =
+			get_pgpu_vgpu_compatibility_internal iface vgpu pgpu_metadata 
+		in {
+			vm_compat = vgpu_compat_get_vm_compat vgpu_compat;
+			pgpu_compat_limit = vgpu_compat_get_pgpu_compat_limit vgpu_compat
+		   }
+	in get_vgpus_for_vm iface device vm_domid
+	|> List.map vgpu_to_compat
