@@ -16,7 +16,7 @@ type memory_info = {
 }
 
 type pci_info = {
-	bus_id: string;
+	bus_id: string; (** domain:bus:device.function PCI identifier *)
 	domain: int32;
 	bus: int32;
 	device: int32;

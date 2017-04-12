@@ -1,6 +1,8 @@
 open Rrdd_plugin
 
-module Process = Process(struct let name = "xcp-rrdd-gpumon" end)
+let plugin_name = "xcp-rrdd-gpumon"
+
+module Process = Process(struct let name = plugin_name end)
 
 let nvidia_vendor_id = 0x10del
 
@@ -278,19 +280,45 @@ let close_nvml_interface interface =
 		(fun () -> Nvml.shutdown interface)
 		(fun () -> Nvml.library_close interface)
 
-let () =
-	let module Server = Gpumon_interface.Server(Gpumon_server) in
+let start server =
+	let (_: Thread.t) = Thread.create (fun () ->
+		Xcp_service.serve_forever server
+	) () in
+	()
 
+let handle_shutdown handler () =
+	Sys.set_signal Sys.sigterm (Sys.Signal_handle handler);
+	Sys.set_signal Sys.sigint  (Sys.Signal_handle handler);
+	Sys.set_signal Sys.sigpipe Sys.Signal_ignore
+
+let () =
 	Process.initialise ();
-	match open_nvml_interface_noexn () with
-	| Some interface -> begin
-		Process.D.info "Opened NVML interface";
-		let server = Xcp_service.make
-			~path:Gpumon_interface.xml_path
-			~queue_name:Gpumon_interface.queue_name
-			~rpc_fn:(Server.process ())
-			() in
-		let _ = Thread.create Xcp_service.serve_forever server in
+	let maybe_interface = open_nvml_interface_noexn () in
+
+	(* Define the new signal handler *)
+	let stop_handler signal =
+		let _ = match maybe_interface with
+		| Some interface -> close_nvml_interface interface
+		| None -> ()
+		in 
+		Process.D.info "Received signal %d: deregistering plugin %s..." signal plugin_name;
+		exit 0
+	in
+	(* gpumon idl server *)
+	let module Gpumon_server = Gpumon_server.Make(struct
+		let interface = maybe_interface
+	end) in
+	let module Server = Gpumon_interface.Server(Gpumon_server) in
+	let server = Xcp_service.make
+		~path:Gpumon_interface.xml_path
+		~queue_name:Gpumon_interface.queue_name
+		~rpc_fn:(Server.process ())
+		() 
+	in
+	let _ = (handle_shutdown stop_handler (); start server) in
+
+	(* gpumon rrdd interface *)
+	let rec rrdd_loop interface = 
 		try
 			let gpus = get_gpus interface in
 			(* Share one page per GPU - this is plenty for the six datasources per GPU
@@ -301,14 +329,20 @@ let () =
 				~target:(Reporter.Local shared_page_count)
 				~protocol:Rrd_interface.V2
 				~dss_f:(fun () -> generate_all_gpu_dss interface gpus)
-		with e ->
-			Process.D.error "Exiting due to unexpected exception: %s"
-				(Printexc.to_string e);
-			close_nvml_interface interface
+		with e -> begin
+			Process.D.error "Unexpected exception: %s" (Printexc.to_string e);
+			Thread.delay 5.0;
+			rrdd_loop interface
+		end
+	in
+	
+	match maybe_interface with
+	| Some interface -> begin
+		Process.D.info "Opened NVML interface";
+		rrdd_loop interface
 	end
 	| None ->
 		Process.D.info "Could not open NVML interface - sleeping forever";
 		while true do
 			Thread.delay 3600.0
 		done
-
