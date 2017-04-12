@@ -38,10 +38,6 @@ type vgpu_compatibility_t
 
 type vm_compat = None | Cold | Hybernate | Sleep | Live
 type pgpu_compat_limit = None | HostDriver | GuestDriver | GPU | Other
-type vgpu_compatibility = {
-	vm_compat: vm_compat list;
-	pgpu_compat_limit: pgpu_compat_limit list;
-}
 
 external library_open: unit -> interface = "stub_nvml_open"
 let library_open () =
@@ -88,7 +84,7 @@ external device_get_active_vgpus: interface -> device -> vgpu_instance list =
 external vgpu_instance_get_vm_domid: interface -> vgpu_instance -> vm_domid = 
 	"stub_nvml_vgpu_instance_get_vm_id"
 
-external get_pgpu_vgpu_compatibility_internal: interface -> vgpu_instance -> pgpu_metadata -> vgpu_compatibility_t =
+external get_pgpu_vgpu_compatibility: interface -> vgpu_instance -> pgpu_metadata -> vgpu_compatibility_t =
     "stub_nvml_get_pgpu_vgpu_compatibility" 
 external vgpu_compat_get_vm_compat: vgpu_compatibility_t -> vm_compat list =
 	"stub_vgpu_compat_get_vm_compat"
@@ -103,14 +99,3 @@ let get_vgpus_for_vm iface device vm_domid =
 		match vgpu_instance_get_vm_domid iface vgpu with 
 		| domid when domid = vm_domid -> Some vgpu
 		| _ -> None) vgpus
-
-let get_pgpu_vgpu_compatibility iface device vm_domid pgpu_metadata =
-	let vgpu_to_compat vgpu =
-		let vgpu_compat =
-			get_pgpu_vgpu_compatibility_internal iface vgpu pgpu_metadata 
-		in {
-			vm_compat = vgpu_compat_get_vm_compat vgpu_compat;
-			pgpu_compat_limit = vgpu_compat_get_pgpu_compat_limit vgpu_compat
-		   }
-	in get_vgpus_for_vm iface device vm_domid
-	|> List.map vgpu_to_compat
