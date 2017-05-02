@@ -23,20 +23,17 @@ module Make(I: Interface) = struct
 
   module Nvidia = struct
     
-    exception InterfaceNotAvailable
-    exception Failure of string
-
     let get_interface_exn () = 
     match I.interface with
     | Some interface -> interface
-    | None -> raise InterfaceNotAvailable
+    | None -> raise Gpumon_interface.NvmlInterfaceNotAvailable
 
     let get_pgpu_metadata _ dbg pgpu_address =
       let interface = get_interface_exn () in
       try
         let device = Nvml.device_get_handle_by_pci_bus_id interface pgpu_address in
         Nvml.device_get_pgpu_metadata interface device
-      with err -> raise (Failure (Printexc.to_string err))
+      with err -> raise (Gpumon_interface.NvmlFailure (Printexc.to_string err))
 
     let get_pgpu_vm_compatibility _ dbg pgpu_address domid pgpu_metadata =
       let interface = get_interface_exn () in
@@ -59,7 +56,7 @@ module Make(I: Interface) = struct
           in
           List.map vgpu_to_compat vgpus
         with err -> 
-          raise (Failure (Printexc.to_string err))
+          raise (Gpumon_interface.NvmlFailure (Printexc.to_string err))
       in
       match compatibility with
       | [] ->
