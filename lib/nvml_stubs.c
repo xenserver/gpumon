@@ -608,61 +608,6 @@ CAMLprim value stub_nvml_vgpu_instance_get_vm_id(
     CAMLreturn(ml_vm_id);
 }
 
-// get relevant metadata about a running vGPU
-// returns compatibility information and an indication about what is the
-// limiting factor in nvmlVgpuPgpuCompatibility_t
-CAMLprim value stub_nvml_get_pgpu_vgpu_compatibility(
-        value ml_interface,
-        value ml_vgpu_instance,
-        value ml_pgpu_metadata) {
-    CAMLparam3(ml_interface, ml_vgpu_instance, ml_pgpu_metadata);
-    CAMLlocal1(ml_vgpu_pgpu_compat_meta);
-    nvmlReturn_t error;
-    nvmlInterface* interface;
-    nvmlVgpuPgpuMetadata_t* pgpuMetadata;
-    nvmlVgpuInstance_t vgpuInstance;
-    nvmlVgpuPgpuCompatibility_t vgpuCompatibility; 
-
-    unsigned int vgpuMetadataSize = 0;
-    nvmlVgpuMetadata_t* vgpuMetadata = NULL;
-
-    interface = (nvmlInterface*)ml_interface;
-    vgpuInstance = (nvmlVgpuInstance_t)Int_val(ml_vgpu_instance);
-    pgpuMetadata = (nvmlVgpuPgpuMetadata_t*)ml_pgpu_metadata;
-
-    // Get metadata dynamically increasing the buffer size
-    int dummy;
-    do {
-        error = interface->vgpuInstanceGetMetadata(
-            vgpuInstance,
-            (vgpuMetadata)?vgpuMetadata:(nvmlVgpuMetadata_t*) &dummy,
-            &vgpuMetadataSize);
-        if ((error == NVML_ERROR_INSUFFICIENT_SIZE) && (vgpuMetadataSize > 0)) {
-            if (vgpuMetadata) { free(vgpuMetadata); }
-            vgpuMetadata = (nvmlVgpuMetadata_t*) malloc(vgpuMetadataSize);
-            if (!vgpuMetadata) { check_error(interface, NVML_ERROR_MEMORY); }
-        }
-    } while ((error == NVML_ERROR_INSUFFICIENT_SIZE) && (vgpuMetadataSize > 0));
-    if (error != NVML_SUCCESS) {
-        free(vgpuMetadata);
-        check_error(interface, error);
-    }
-
-    error = interface->getVgpuCompatibility(
-        vgpuMetadata,
-        pgpuMetadata, 
-        &vgpuCompatibility);
-    free(vgpuMetadata);
-    check_error(interface, error);
-
-    unsigned int compatSize = sizeof(nvmlVgpuPgpuCompatibility_t);
-    ml_vgpu_pgpu_compat_meta = caml_alloc_string(compatSize);
-    memcpy(String_val(ml_vgpu_pgpu_compat_meta),
-        &vgpuCompatibility, compatSize);
-
-    CAMLreturn(ml_vgpu_pgpu_compat_meta);
-}
-
 CAMLprim value stub_nvml_get_pgpu_vgpu_compatibility2(
         value ml_interface,
         value ml_vgpu_metadata,
