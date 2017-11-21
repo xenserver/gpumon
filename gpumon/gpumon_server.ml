@@ -35,6 +35,17 @@ module Make(I: Interface) = struct
         Nvml.device_get_pgpu_metadata interface device
       with err -> raise (Gpumon_interface.NvmlFailure (Printexc.to_string err))
 
+    let get_vgpu_metadata _ dbg domid pgpu_address =
+      let interface = get_interface_exn () in
+      let domid'    = string_of_int domid  in
+      try
+        Nvml.device_get_handle_by_pci_bus_id interface pgpu_address
+        |> fun device -> Nvml.get_vgpus_for_vm interface device domid'
+        |> List.map (Nvml.get_vgpu_metadata interface)
+      with err ->
+        raise (Gpumon_interface.NvmlFailure (Printexc.to_string err))
+
+
     let get_pgpu_vm_compatibility _ dbg pgpu_address domid pgpu_metadata =
       let interface = get_interface_exn () in
       let compatibility = 
