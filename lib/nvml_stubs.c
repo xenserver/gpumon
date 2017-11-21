@@ -663,6 +663,38 @@ CAMLprim value stub_nvml_get_pgpu_vgpu_compatibility(
     CAMLreturn(ml_vgpu_pgpu_compat_meta);
 }
 
+CAMLprim value stub_nvml_get_pgpu_vgpu_compatibility2(
+        value ml_interface,
+        value ml_vgpu_metadata,
+        value ml_pgpu_metadata)
+{
+    CAMLparam3(ml_interface, ml_vgpu_metadata, ml_pgpu_metadata);
+    CAMLlocal1(ml_vgpu_pgpu_compat_meta);
+    nvmlReturn_t                error;
+    nvmlInterface*              interface;
+    nvmlVgpuPgpuMetadata_t*     pgpuMetadata;
+    nvmlVgpuMetadata_t*         vgpuMetadata;
+    nvmlVgpuPgpuCompatibility_t vgpuCompatibility;
+
+    interface    = (nvmlInterface*)           ml_interface;
+    vgpuMetadata = (nvmlVgpuMetadata_t*)      ml_vgpu_metadata;
+    pgpuMetadata = (nvmlVgpuPgpuMetadata_t*)  ml_pgpu_metadata;
+
+    error = interface->getVgpuCompatibility(
+        vgpuMetadata,
+        pgpuMetadata,
+        &vgpuCompatibility);
+    check_error(interface, error);
+
+    size_t compatSize = sizeof(nvmlVgpuPgpuCompatibility_t);
+    ml_vgpu_pgpu_compat_meta = caml_alloc_string(compatSize);
+    memcpy(String_val(ml_vgpu_pgpu_compat_meta),
+        &vgpuCompatibility, compatSize);
+
+    CAMLreturn(ml_vgpu_pgpu_compat_meta);
+}
+
+
 CAMLprim value stub_vgpu_compat_get_vm_compat(value ml_vgpu_compat) {
     CAMLparam1(ml_vgpu_compat);
     CAMLlocal2(tail, cons);
