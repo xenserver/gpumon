@@ -608,7 +608,7 @@ CAMLprim value stub_nvml_vgpu_instance_get_vm_id(
     CAMLreturn(ml_vm_id);
 }
 
-CAMLprim value stub_nvml_get_pgpu_vgpu_compatibility2(
+CAMLprim value stub_nvml_get_pgpu_vgpu_compatibility(
         value ml_interface,
         value ml_vgpu_metadata,
         value ml_pgpu_metadata)

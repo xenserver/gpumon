@@ -53,7 +53,7 @@ module Make(I: Interface) = struct
           (* Return a tuple vm_compat, pgpu_compat_limit for convenience:
           * we have List helpers that later help to split the list *)
           let vgpu_to_compat vgpu_metadata =
-            let vgpu_compat = Nvml.get_pgpu_vgpu_compatibility2
+            let vgpu_compat = Nvml.get_pgpu_vgpu_compatibility
               interface vgpu_metadata pgpu_metadata
             in
             ( Nvml.vgpu_compat_get_vm_compat vgpu_compat

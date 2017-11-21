@@ -88,8 +88,8 @@ external vgpu_instance_get_vm_domid: interface -> vgpu_instance -> vm_domid =
 external get_vgpu_metadata: interface -> vgpu_instance -> vgpu_metadata =
 	"stub_nvml_get_vgpu_metadata"
 
-external get_pgpu_vgpu_compatibility2: interface -> vgpu_metadata -> pgpu_metadata -> vgpu_compatibility_t =
-	"stub_nvml_get_pgpu_vgpu_compatibility2"
+external get_pgpu_vgpu_compatibility: interface -> vgpu_metadata -> pgpu_metadata -> vgpu_compatibility_t =
+	"stub_nvml_get_pgpu_vgpu_compatibility"
 
 external vgpu_compat_get_vm_compat: vgpu_compatibility_t -> vm_compat list =
 	"stub_vgpu_compat_get_vm_compat"
