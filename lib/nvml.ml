@@ -30,6 +30,7 @@ type utilization = {
 }
 
 type pgpu_metadata = string
+type vgpu_metadata = string
 
 type vgpu_instance = int
 type vm_domid = string
@@ -83,6 +84,9 @@ external device_get_active_vgpus: interface -> device -> vgpu_instance list =
 	"stub_nvml_device_get_active_vgpus"
 external vgpu_instance_get_vm_domid: interface -> vgpu_instance -> vm_domid = 
 	"stub_nvml_vgpu_instance_get_vm_id"
+
+external get_vgpu_metadata: interface -> vgpu_instance -> vgpu_metadata =
+	"stub_nvml_get_vgpu_metadata"
 
 external get_pgpu_vgpu_compatibility: interface -> vgpu_instance -> pgpu_metadata -> vgpu_compatibility_t =
     "stub_nvml_get_pgpu_vgpu_compatibility" 
