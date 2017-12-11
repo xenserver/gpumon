@@ -23,17 +23,40 @@ module Make(I: Interface) = struct
 
   module Nvidia = struct
     
+    let host_driver_supporting_migration = 385
+    (** Smallest major version of the host driver that supports migration *)
+
     let get_interface_exn () = 
     match I.interface with
     | Some interface -> interface
     | None -> raise Gpumon_interface.NvmlInterfaceNotAvailable
 
     let get_pgpu_metadata _ dbg pgpu_address =
+      let this = "get_pgpu_metadata" in
       let interface = get_interface_exn () in
       try
-        let device = Nvml.device_get_handle_by_pci_bus_id interface pgpu_address in
-        Nvml.device_get_pgpu_metadata interface device
-      with err -> raise (Gpumon_interface.NvmlFailure (Printexc.to_string err))
+        let device =
+          Nvml.device_get_handle_by_pci_bus_id interface pgpu_address in
+        let compat =
+          Nvml.device_get_pgpu_metadata interface device in
+        let version, revision, driver =
+          ( Nvml.pgpu_metadata_get_pgpu_version compat
+          , Nvml.pgpu_metadata_get_pgpu_revision compat
+          , Nvml.pgpu_metadata_get_pgpu_host_driver_version compat
+          ) in
+        let major = Scanf.sscanf driver "%d." (fun x -> x) in
+        info "%s: pGPU version=%d revision=%d driver='%s' (%d)"
+          this version revision driver major;
+        if major >= host_driver_supporting_migration then
+          compat
+        else
+          let msg = Printf.sprintf
+            "%s: pGPU host driver version %d < %d does not support migration"
+            this major host_driver_supporting_migration in
+          raise (Gpumon_interface.NvmlFailure msg)
+      with
+        | Gpumon_interface.NvmlFailure(_) as err -> raise err
+        | err -> raise (Gpumon_interface.NvmlFailure (Printexc.to_string err))
 
     let get_vgpu_metadata _ dbg domid pgpu_address =
       let interface = get_interface_exn () in
