@@ -23,7 +23,7 @@ module Make(I: Interface) = struct
 
   module Nvidia = struct
     
-    let host_driver_supporting_migration = 385
+    let host_driver_supporting_migration = 390
     (** Smallest major version of the host driver that supports migration *)
 
     let get_interface_exn () = 
