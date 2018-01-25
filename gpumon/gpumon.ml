@@ -308,12 +308,12 @@ let () =
 	let module Gpumon_server = Gpumon_server.Make(struct
 		let interface = maybe_interface
 	end) in
-	let module Server = Gpumon_interface.Server(Gpumon_server) in
+	let module Server = Gpumon_interface.RPC_API(Idl.GenServerExn ()) in
 	let server = Xcp_service.make
 		~path:Gpumon_interface.xml_path
 		~queue_name:Gpumon_interface.queue_name
-		~rpc_fn:(Server.process ())
-		() 
+		~rpc_fn:(Idl.server Server.implementation)
+		()
 	in
 	let _ = (handle_shutdown stop_handler (); start server) in
 
