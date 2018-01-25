@@ -22,14 +22,14 @@ module Make(I: Interface) = struct
   type context = unit
 
   module Nvidia = struct
-    
+
     let host_driver_supporting_migration = 390
     (** Smallest major version of the host driver that supports migration *)
 
-    let get_interface_exn () = 
-    match I.interface with
-    | Some interface -> interface
-    | None -> raise Gpumon_interface.(Gpumon_error NvmlInterfaceNotAvailable)
+    let get_interface_exn () =
+      match I.interface with
+      | Some interface -> interface
+      | None -> raise Gpumon_interface.(Gpumon_error NvmlInterfaceNotAvailable)
 
     let get_pgpu_metadata _ dbg pgpu_address =
       let this = "get_pgpu_metadata" in
@@ -51,12 +51,12 @@ module Make(I: Interface) = struct
           compat
         else
           let msg = Printf.sprintf
-            "%s: pGPU host driver version %d < %d does not support migration"
-            this major host_driver_supporting_migration in
+              "%s: pGPU host driver version %d < %d does not support migration"
+              this major host_driver_supporting_migration in
           raise Gpumon_interface.(Gpumon_error (NvmlFailure msg))
       with
-        | Gpumon_interface.(Gpumon_error (NvmlFailure _)) as err -> raise err
-        | err -> raise Gpumon_interface.(Gpumon_error (NvmlFailure (Printexc.to_string err)))
+      | Gpumon_interface.(Gpumon_error (NvmlFailure _)) as err -> raise err
+      | err -> raise Gpumon_interface.(Gpumon_error (NvmlFailure (Printexc.to_string err)))
 
     let get_vgpu_metadata _ dbg domid pgpu_address =
       let interface = get_interface_exn () in
@@ -64,7 +64,7 @@ module Make(I: Interface) = struct
       try
         Nvml.device_get_handle_by_pci_bus_id interface pgpu_address
         |> fun device -> Nvml.get_vgpus_for_vm interface device domid'
-        |> List.map (Nvml.get_vgpu_metadata interface)
+                         |> List.map (Nvml.get_vgpu_metadata interface)
       with err ->
         raise Gpumon_interface.(Gpumon_error (NvmlFailure (Printexc.to_string err)))
 
