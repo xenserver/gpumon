@@ -31,7 +31,7 @@ module Make(I: Interface) = struct
       | Some interface -> interface
       | None -> raise Gpumon_interface.(Gpumon_error NvmlInterfaceNotAvailable)
 
-    let get_pgpu_metadata _ dbg pgpu_address =
+    let get_pgpu_metadata dbg pgpu_address =
       let this = "get_pgpu_metadata" in
       let interface = get_interface_exn () in
       try
@@ -58,7 +58,7 @@ module Make(I: Interface) = struct
       | Gpumon_interface.(Gpumon_error (NvmlFailure _)) as err -> raise err
       | err -> raise Gpumon_interface.(Gpumon_error (NvmlFailure (Printexc.to_string err)))
 
-    let get_vgpu_metadata _ dbg domid pgpu_address =
+    let get_vgpu_metadata dbg domid pgpu_address =
       let interface = get_interface_exn () in
       let domid'    = string_of_int domid  in
       try
@@ -68,7 +68,7 @@ module Make(I: Interface) = struct
       with err ->
         raise Gpumon_interface.(Gpumon_error (NvmlFailure (Printexc.to_string err)))
 
-    let get_pgpu_vgpu_compatibility x dbg pgpu_metadata vgpu_metadata =
+    let get_pgpu_vgpu_compatibility dbg pgpu_metadata vgpu_metadata =
       let interface = get_interface_exn () in
       let compatibility =
         try
@@ -118,11 +118,10 @@ module Make(I: Interface) = struct
         | _, _ -> Gpumon_interface.(Incompatible failures)
 
 
-    let get_pgpu_vm_compatibility x dbg pgpu_address domid pgpu_metadata =
+    let get_pgpu_vm_compatibility dbg pgpu_address domid pgpu_metadata =
       get_pgpu_vgpu_compatibility
-        x
         dbg
         pgpu_metadata
-        (get_vgpu_metadata x dbg domid pgpu_address)
+        (get_vgpu_metadata dbg domid pgpu_address)
   end
 end
