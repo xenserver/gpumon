@@ -22,16 +22,16 @@ module Make(I: Interface) = struct
   type context = unit
 
   module Nvidia = struct
-    
+
     let host_driver_supporting_migration = 390
     (** Smallest major version of the host driver that supports migration *)
 
-    let get_interface_exn () = 
-    match I.interface with
-    | Some interface -> interface
-    | None -> raise Gpumon_interface.NvmlInterfaceNotAvailable
+    let get_interface_exn () =
+      match I.interface with
+      | Some interface -> interface
+      | None -> raise Gpumon_interface.(Gpumon_error NvmlInterfaceNotAvailable)
 
-    let get_pgpu_metadata _ dbg pgpu_address =
+    let get_pgpu_metadata dbg pgpu_address =
       let this = "get_pgpu_metadata" in
       let interface = get_interface_exn () in
       try
@@ -51,24 +51,24 @@ module Make(I: Interface) = struct
           compat
         else
           let msg = Printf.sprintf
-            "%s: pGPU host driver version %d < %d does not support migration"
-            this major host_driver_supporting_migration in
-          raise (Gpumon_interface.NvmlFailure msg)
+              "%s: pGPU host driver version %d < %d does not support migration"
+              this major host_driver_supporting_migration in
+          raise Gpumon_interface.(Gpumon_error (NvmlFailure msg))
       with
-        | Gpumon_interface.NvmlFailure(_) as err -> raise err
-        | err -> raise (Gpumon_interface.NvmlFailure (Printexc.to_string err))
+      | Gpumon_interface.(Gpumon_error (NvmlFailure _)) as err -> raise err
+      | err -> raise Gpumon_interface.(Gpumon_error (NvmlFailure (Printexc.to_string err)))
 
-    let get_vgpu_metadata _ dbg domid pgpu_address =
+    let get_vgpu_metadata dbg domid pgpu_address =
       let interface = get_interface_exn () in
       let domid'    = string_of_int domid  in
       try
         Nvml.device_get_handle_by_pci_bus_id interface pgpu_address
-        |> fun device -> Nvml.get_vgpus_for_vm interface device domid'
+        |> (fun device -> Nvml.get_vgpus_for_vm interface device domid')
         |> List.map (Nvml.get_vgpu_metadata interface)
       with err ->
-        raise (Gpumon_interface.NvmlFailure (Printexc.to_string err))
+        raise Gpumon_interface.(Gpumon_error (NvmlFailure (Printexc.to_string err)))
 
-    let get_pgpu_vgpu_compatibility x dbg pgpu_metadata vgpu_metadata =
+    let get_pgpu_vgpu_compatibility dbg pgpu_metadata vgpu_metadata =
       let interface = get_interface_exn () in
       let compatibility =
         try
@@ -84,7 +84,7 @@ module Make(I: Interface) = struct
           in
           List.map vgpu_to_compat vgpu_metadata
         with err ->
-          raise (Gpumon_interface.NvmlFailure (Printexc.to_string err))
+          raise Gpumon_interface.(Gpumon_error (NvmlFailure (Printexc.to_string err)))
       in
       match compatibility with
       | [] ->
@@ -118,11 +118,10 @@ module Make(I: Interface) = struct
         | _, _ -> Gpumon_interface.(Incompatible failures)
 
 
-    let get_pgpu_vm_compatibility x dbg pgpu_address domid pgpu_metadata =
+    let get_pgpu_vm_compatibility dbg pgpu_address domid pgpu_metadata =
       get_pgpu_vgpu_compatibility
-        x
         dbg
         pgpu_metadata
-        (get_vgpu_metadata x dbg domid pgpu_address)
+        (get_vgpu_metadata dbg domid pgpu_address)
   end
 end
