@@ -130,7 +130,7 @@ let get_gpus interface =
       match get_required_metrics config pci_info with
       | Some (memory_metrics, other_metrics, utilisation_metrics) -> begin
           Nvml.device_set_persistence_mode interface device Nvml.Enabled;
-          let bus_id = String.lowercase pci_info.Nvml.bus_id in
+          let bus_id = String.lowercase_ascii pci_info.Nvml.bus_id in
           let gpu = {
             device;
             bus_id;

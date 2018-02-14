@@ -31,7 +31,7 @@ type metric =
   | Other of other_metric
 
 let metric_of_string str =
-  match String.lowercase str with
+  match String.lowercase_ascii str with
   | "memoryfree" -> Ok (Memory Free)
   | "memoryused" -> Ok (Memory Used)
   | "temperature" -> Ok (Other Temperature)
