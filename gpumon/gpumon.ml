@@ -1,3 +1,13 @@
+
+module type IMPLEMENTATION = sig
+  open Gpumon_interface
+
+  val get_pgpu_metadata           : debug_info -> pgpu_address         -> nvidia_pgpu_metadata
+  val get_vgpu_metadata           : debug_info -> domid                -> pgpu_address              -> nvidia_vgpu_metadata list
+  val get_pgpu_vm_compatibility   : debug_info -> pgpu_address         -> domid                     -> nvidia_pgpu_metadata -> compatibility
+  val get_pgpu_vgpu_compatibility : debug_info -> nvidia_pgpu_metadata -> nvidia_vgpu_metadata list -> compatibility
+end
+
 open Rrdd_plugin
 
 let plugin_name = "xcp-rrdd-gpumon"
@@ -291,6 +301,21 @@ let handle_shutdown handler () =
   Sys.set_signal Sys.sigint  (Sys.Signal_handle handler);
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore
 
+
+(* PPX-based server generation *)
+module Server = Gpumon_interface.RPC_API(Idl.GenServerExn ())
+
+(* Provide server API calls *)
+module Make(Impl : IMPLEMENTATION) = struct
+
+  (* bind server method declarations to implementations *)
+  let bind () =
+    Server.Nvidia.get_pgpu_metadata           Impl.get_pgpu_metadata           ;
+    Server.Nvidia.get_vgpu_metadata           Impl.get_vgpu_metadata           ;
+    Server.Nvidia.get_pgpu_vgpu_compatibility Impl.get_pgpu_vgpu_compatibility ;
+    Server.Nvidia.get_pgpu_vm_compatibility   Impl.get_pgpu_vm_compatibility
+end
+
 let () =
   Process.initialise ();
   let maybe_interface = open_nvml_interface_noexn () in
@@ -304,11 +329,13 @@ let () =
     Process.D.info "Received signal %d: deregistering plugin %s..." signal plugin_name;
     exit 0
   in
-  (* gpumon idl server *)
   let module Gpumon_server = Gpumon_server.Make(struct
       let interface = maybe_interface
     end) in
-  let module Server = Gpumon_interface.RPC_API(Idl.GenServerExn ()) in
+  (* create daemon module to bind server call declarations to implementations *)
+  let module Daemon = Make(Gpumon_server.Nvidia) in
+  Daemon.bind ();
+
   let server = Xcp_service.make
       ~path:Gpumon_interface.xml_path
       ~queue_name:Gpumon_interface.queue_name
