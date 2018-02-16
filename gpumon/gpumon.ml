@@ -1,13 +1,4 @@
 
-module type IMPLEMENTATION = sig
-  open Gpumon_interface
-
-  val get_pgpu_metadata           : debug_info -> pgpu_address         -> nvidia_pgpu_metadata
-  val get_vgpu_metadata           : debug_info -> domid                -> pgpu_address              -> nvidia_vgpu_metadata list
-  val get_pgpu_vm_compatibility   : debug_info -> pgpu_address         -> domid                     -> nvidia_pgpu_metadata -> compatibility
-  val get_pgpu_vgpu_compatibility : debug_info -> nvidia_pgpu_metadata -> nvidia_vgpu_metadata list -> compatibility
-end
-
 open Rrdd_plugin
 
 let plugin_name = "xcp-rrdd-gpumon"
@@ -306,14 +297,14 @@ let handle_shutdown handler () =
 module Server = Gpumon_interface.RPC_API(Idl.GenServerExn ())
 
 (* Provide server API calls *)
-module Make(Impl : IMPLEMENTATION) = struct
+module Make(Impl : Gpumon_server.IMPLEMENTATION) = struct
 
   (* bind server method declarations to implementations *)
   let bind () =
-    Server.Nvidia.get_pgpu_metadata           Impl.get_pgpu_metadata           ;
-    Server.Nvidia.get_vgpu_metadata           Impl.get_vgpu_metadata           ;
-    Server.Nvidia.get_pgpu_vgpu_compatibility Impl.get_pgpu_vgpu_compatibility ;
-    Server.Nvidia.get_pgpu_vm_compatibility   Impl.get_pgpu_vm_compatibility
+    Server.Nvidia.get_pgpu_metadata           Impl.Nvidia.get_pgpu_metadata           ;
+    Server.Nvidia.get_vgpu_metadata           Impl.Nvidia.get_vgpu_metadata           ;
+    Server.Nvidia.get_pgpu_vgpu_compatibility Impl.Nvidia.get_pgpu_vgpu_compatibility ;
+    Server.Nvidia.get_pgpu_vm_compatibility   Impl.Nvidia.get_pgpu_vm_compatibility
 end
 
 let () =
@@ -333,7 +324,7 @@ let () =
       let interface = maybe_interface
     end) in
   (* create daemon module to bind server call declarations to implementations *)
-  let module Daemon = Make(Gpumon_server.Nvidia) in
+  let module Daemon = Make(Gpumon_server) in
   Daemon.bind ();
 
   let server = Xcp_service.make

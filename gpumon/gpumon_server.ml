@@ -11,11 +11,25 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
  *)
+
+module type IMPLEMENTATION = sig
+  open Gpumon_interface
+  
+  module Nvidia: sig
+    val get_pgpu_metadata           : debug_info -> pgpu_address         -> nvidia_pgpu_metadata
+    val get_vgpu_metadata           : debug_info -> domid                -> pgpu_address              -> nvidia_vgpu_metadata list
+    val get_pgpu_vm_compatibility   : debug_info -> pgpu_address         -> domid                     -> nvidia_pgpu_metadata -> compatibility
+    val get_pgpu_vgpu_compatibility : debug_info -> nvidia_pgpu_metadata -> nvidia_vgpu_metadata list -> compatibility
+  end
+end
+
+
+
 module type Interface = sig
   val interface: Nvml.interface option
 end
 
-module Make(I: Interface) = struct
+module Make(I: Interface):IMPLEMENTATION = struct
   module D = Debug.Make(struct let name = Gpumon_interface.service_name end)
   open D
 
