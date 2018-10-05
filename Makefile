@@ -9,7 +9,7 @@ PLUGINS     	= $(LIBEXECDIR)/xcp-rrdd-plugins
 BUILD       	= _build/default
 DUNE 		= dune
 
-.PHONY: install all clean test
+.PHONY: install all clean test mock
 
 all:
 	$(DUNE) build
@@ -23,5 +23,7 @@ clean:
 test:
 	$(DUNE) runtest
 
-
+mock:
+	cp mocks/mock.ml lib/nvml.ml
+	cp mocks/mock.c  stubs/nvml_stubs.c
 
