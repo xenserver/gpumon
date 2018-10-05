@@ -1,28 +1,27 @@
-DESTDIR ?= 
-LIBEXECDIR ?= /opt/xensource/libexec
+# vim: set noet ts=8:
+#
+# This Makefile is not called from Opam but only used for
+# convenience during development
+#
 
-TESTS_FLAG=--enable-tests
+LIBEXECDIR 	?= /opt/xensource/libexec
+PLUGINS     	= $(LIBEXECDIR)/xcp-rrdd-plugins
+BUILD       	= _build/default
+DUNE 		= dune
 
-J=4
+.PHONY: install all clean test
 
-LIBEXECDIR?=/opt/xensource/libexec
+all:
+	$(DUNE) build
 
-all: build
-
-setup.data:
-	ocaml setup.ml -configure $(TESTS_FLAG)
-
-build: setup.data
-	ocaml setup.ml -build -j $(J)
-
-test: build
-	ocaml setup.ml -test
+install: all
+	install -D -m 755 $(BUILD)/gpumon/gpumon.exe $(PLUGINS)/xcp-rrdd-gpumon
 
 clean:
-	ocamlbuild -clean
-	rm -f setup.data setup.log
+	$(DUNE) clean
 
-.PHONY: install
-install: build
-	mkdir -p $(DESTDIR)$(LIBEXECDIR)/xcp-rrdd-plugins/
-	install -m 755 _build/gpumon/gpumon.native $(DESTDIR)$(LIBEXECDIR)/xcp-rrdd-plugins/xcp-rrdd-gpumon
+test:
+	$(DUNE) runtest
+
+
+

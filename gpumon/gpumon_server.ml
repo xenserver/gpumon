@@ -33,8 +33,6 @@ module Make(I: Interface):IMPLEMENTATION = struct
   module D = Debug.Make(struct let name = Gpumon_interface.service_name end)
   open D
 
-  type context = unit
-
   module Nvidia = struct
 
     let host_driver_supporting_migration = 390
@@ -45,7 +43,7 @@ module Make(I: Interface):IMPLEMENTATION = struct
       | Some interface -> interface
       | None -> raise Gpumon_interface.(Gpumon_error NvmlInterfaceNotAvailable)
 
-    let get_pgpu_metadata dbg pgpu_address =
+    let get_pgpu_metadata _dbg pgpu_address =
       let this = "get_pgpu_metadata" in
       let interface = get_interface_exn () in
       try
@@ -72,7 +70,7 @@ module Make(I: Interface):IMPLEMENTATION = struct
       | Gpumon_interface.(Gpumon_error (NvmlFailure _)) as err -> raise err
       | err -> raise Gpumon_interface.(Gpumon_error (NvmlFailure (Printexc.to_string err)))
 
-    let get_vgpu_metadata dbg domid pgpu_address =
+    let get_vgpu_metadata _dbg domid pgpu_address =
       let interface = get_interface_exn () in
       let domid'    = string_of_int domid  in
       try
@@ -82,7 +80,7 @@ module Make(I: Interface):IMPLEMENTATION = struct
       with err ->
         raise Gpumon_interface.(Gpumon_error (NvmlFailure (Printexc.to_string err)))
 
-    let get_pgpu_vgpu_compatibility dbg pgpu_metadata vgpu_metadata =
+    let get_pgpu_vgpu_compatibility _dbg pgpu_metadata vgpu_metadata =
       let interface = get_interface_exn () in
       let compatibility =
         try

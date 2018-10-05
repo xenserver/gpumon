@@ -1,0 +1,4 @@
+(library
+ (name nvml_stubs)
+ (wrapped false)
+ (c_names nvml_stubs))

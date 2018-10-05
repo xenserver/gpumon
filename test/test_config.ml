@@ -10,7 +10,7 @@ let string_of_result =
   | Ok config -> Printf.sprintf "Ok %s" (Gpumon_config.to_string config)
 
 let test_file config_file expected_result =
-  let config_file_path = Filename.concat "test/data" config_file in
+  let config_file_path = Filename.concat "data" config_file in
   let actual_result = Gpumon_config.of_file config_file_path in
   assert_equal ~msg:"Unexpected result from read_config_file"
     ~printer:string_of_result
