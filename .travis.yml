@@ -1,12 +1,15 @@
 language: c
-services: docker
+sudo: required
+service: docker
 install:
-    - wget https://raw.githubusercontent.com/xenserver/xenserver-build-env/master/utils/travis-build-repo.sh
-script: bash travis-build-repo.sh
-sudo: true
+  - wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-docker.sh
+  - cp  mocks/mock.ml lib/nvml.ml
+  - cp  mocks/mock.c  stubs/nvml_stubs.c
+script: bash -ex .travis-docker.sh
 env:
-    global:
-        - REPO_PACKAGE_NAME=gpumon
-        - REPO_CONFIGURE_CMD=true
-        - REPO_BUILD_CMD=make
-        - REPO_TEST_CMD='make test'
+  global:
+    - PACKAGE=gpumon
+    - PINS="gpumon:."
+    - BASE_REMOTE="https://github.com/xapi-project/xs-opam.git"
+  matrix:
+    - DISTRO="debian-9-ocaml-4.06"

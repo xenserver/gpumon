@@ -1,5 +1,4 @@
 open Stdext
-open Fun
 open Rresult
 
 (** Like List.map, but will return an Error if and when f returns an Error. *)
@@ -91,7 +90,7 @@ let unbox_string = function
   | Rpc.String str -> Ok str
   | rpc -> Error (`Parse_failure (Jsonrpc.to_string rpc))
 
-let unbox_enum = function
+let _unbox_enum = function
   | Rpc.Enum enum -> Ok enum
   | rpc -> Error (`Parse_failure (Jsonrpc.to_string rpc))
 
@@ -176,7 +175,7 @@ let of_file path =
 let to_string config =
   Rpc.Dict
     (List.map
-       (fun {device_id; metrics} ->
+       (fun {device_id; metrics; _} ->
           Printf.sprintf "%04lx" device_id,
           rpc_of_metrics metrics)
        config.device_types)

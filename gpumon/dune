@@ -1,0 +1,6 @@
+
+(executable
+ (name gpumon)
+ (public_name gpumon)
+ (libraries threads rrdd-plugin xcp.gpumon gpumon_lib))
+
