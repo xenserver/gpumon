@@ -5,7 +5,7 @@
 #
 
 LIBEXECDIR 	?= /opt/xensource/libexec
-PLUGINS     	= $(LIBEXECDIR)/xcp-rrdd-plugins
+PLUGINS     	= $(DESTDIR)$(LIBEXECDIR)/xcp-rrdd-plugins
 BUILD       	= _build/default
 DUNE 		= dune
 
