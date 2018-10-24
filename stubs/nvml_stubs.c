@@ -11,6 +11,10 @@
 #include <caml/memory.h>
 #include <caml/signals.h>
 
+/* we want to use the versioned functions defined in nvml.h as strings */
+#define _STR(x) #x
+#define STR(x) _STR(x)
+
 typedef struct nvmlInterface {
     void* handle;
     char* (*errorString)(nvmlReturn_t);
@@ -58,39 +62,39 @@ CAMLprim value stub_nvml_open(value unit) {
     }
 
     // Load nvmlErrorString.
-    interface->errorString = dlsym(interface->handle, "nvmlErrorString");
+    interface->errorString = dlsym(interface->handle, STR(nvmlErrorString));
     if (!interface->errorString) {
         goto SymbolError;
     }
 
     // Load nvmlInit.
-    interface->init = dlsym(interface->handle, "nvmlInit");
+    interface->init = dlsym(interface->handle, STR(nvmlInit));
     if (!interface->init) {
         goto SymbolError;
     }
 
     // Load nvmlShutdown.
-    interface->shutdown = dlsym(interface->handle, "nvmlShutdown");
+    interface->shutdown = dlsym(interface->handle, STR(nvmlShutdown));
     if (!interface->shutdown) {
         goto SymbolError;
     }
 
     // Load nvmlDeviceGetCount.
-    interface->deviceGetCount = dlsym(interface->handle, "nvmlDeviceGetCount");
+    interface->deviceGetCount = dlsym(interface->handle, STR(nvmlDeviceGetCount));
     if (!interface->deviceGetCount) {
         goto SymbolError;
     }
 
     // Load nvmlDeviceGetHandleByIndex.
     interface->deviceGetHandleByIndex =
-        dlsym(interface->handle, "nvmlDeviceGetHandleByIndex");
+        dlsym(interface->handle, STR(nvmlDeviceGetHandleByIndex));
     if(!interface->deviceGetHandleByIndex) {
         goto SymbolError;
     }
 
     // Load nvmlDeviceGetHandleByPciBusId
     interface->deviceGetHandleByPciBusId =
-        dlsym(interface->handle, "nvmlDeviceGetHandleByPciBusId");
+        dlsym(interface->handle, STR(nvmlDeviceGetHandleByPciBusId));
     if(!interface->deviceGetHandleByPciBusId) {
         goto SymbolError;
     }
@@ -98,77 +102,77 @@ CAMLprim value stub_nvml_open(value unit) {
 
     // Load nvmlDeviceGetMemoryInfo.
     interface->deviceGetMemoryInfo =
-        dlsym(interface->handle, "nvmlDeviceGetMemoryInfo");
+        dlsym(interface->handle, STR(nvmlDeviceGetMemoryInfo));
     if(!interface->deviceGetMemoryInfo) {
         goto SymbolError;
     }
 
     // Load nvmlDeviceGetPciInfo.
     interface->deviceGetPciInfo =
-        dlsym(interface->handle, "nvmlDeviceGetPciInfo_v2");
+        dlsym(interface->handle, STR(nvmlDeviceGetPciInfo));
     if(!interface->deviceGetPciInfo) {
         goto SymbolError;
     }
 
     // Load nvmlDeviceGetTemperature.
     interface->deviceGetTemperature =
-        dlsym(interface->handle, "nvmlDeviceGetTemperature");
+        dlsym(interface->handle, STR(nvmlDeviceGetTemperature));
     if(!interface->deviceGetTemperature) {
         goto SymbolError;
     }
 
     // Load nvmlDeviceGetPowerUsage.
     interface->deviceGetPowerUsage =
-        dlsym(interface->handle, "nvmlDeviceGetPowerUsage");
+        dlsym(interface->handle, STR(nvmlDeviceGetPowerUsage));
     if(!interface->deviceGetPowerUsage) {
         goto SymbolError;
     }
 
     // Load nvmlDeviceGetUtilizationRates.
     interface->deviceGetUtilizationRates =
-        dlsym(interface->handle, "nvmlDeviceGetUtilizationRates");
+        dlsym(interface->handle, STR(nvmlDeviceGetUtilizationRates));
     if(!interface->deviceGetUtilizationRates) {
         goto SymbolError;
     }
 
     // Load nvmlDeviceSetPersistenceMode.
     interface->deviceSetPersistenceMode =
-        dlsym(interface->handle, "nvmlDeviceSetPersistenceMode");
+        dlsym(interface->handle, STR(nvmlDeviceSetPersistenceMode));
     if(!interface->deviceSetPersistenceMode) {
         goto SymbolError;
     }
 
     // Load nvmlDeviceGetVgpuMetadata.
     interface->deviceGetVgpuMetadata =
-        dlsym(interface->handle, "nvmlDeviceGetVgpuMetadata");
+        dlsym(interface->handle, STR(nvmlDeviceGetVgpuMetadata));
     if(!interface->deviceGetVgpuMetadata) {
         goto SymbolError;
     }
 
     // Load nvmlVgpuInstanceGetMetadata.
     interface->vgpuInstanceGetMetadata =
-        dlsym(interface->handle, "nvmlVgpuInstanceGetMetadata");
+        dlsym(interface->handle, STR(nvmlVgpuInstanceGetMetadata));
     if(!interface->vgpuInstanceGetMetadata) {
         goto SymbolError;
     }
 
     // Load nvmlDeviceGetActiveVgpus.
     interface->deviceGetActiveVgpus =
-        dlsym(interface->handle, "nvmlDeviceGetActiveVgpus");
+        dlsym(interface->handle, STR(nvmlDeviceGetActiveVgpus));
     if(!interface->deviceGetActiveVgpus) {
         goto SymbolError;
     }
 
     // Load nvmlVgpuInstanceGetVmID.
     interface->vgpuInstanceGetVmID =
-        dlsym(interface->handle, "nvmlVgpuInstanceGetVmID");
+        dlsym(interface->handle, STR(nvmlVgpuInstanceGetVmID));
     if(!interface->vgpuInstanceGetVmID) {
         goto SymbolError;
     }
 
     // Load nvmlGetVgpuCompatibility.
     interface->getVgpuCompatibility =
-        dlsym(interface->handle, "nvmlGetVgpuCompatibility");
+        dlsym(interface->handle, STR(nvmlGetVgpuCompatibility));
     if(!interface->getVgpuCompatibility) {
         goto SymbolError;
     }
