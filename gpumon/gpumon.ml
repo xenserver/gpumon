@@ -294,7 +294,7 @@ let handle_shutdown handler () =
 
 
 (* PPX-based server generation *)
-module Server = Gpumon_interface.RPC_API(Idl.GenServerExn ())
+module Server = Gpumon_interface.RPC_API(Idl.Exn.GenServer ())
 
 (* Provide server API calls *)
 module Make(Impl : Gpumon_server.IMPLEMENTATION) = struct
@@ -330,7 +330,7 @@ let () =
   let server = Xcp_service.make
       ~path:Gpumon_interface.xml_path
       ~queue_name:Gpumon_interface.queue_name
-      ~rpc_fn:(Idl.server Server.implementation)
+      ~rpc_fn:(Idl.Exn.server Server.implementation)
       ()
   in
   let _ = (handle_shutdown stop_handler (); start server) in
