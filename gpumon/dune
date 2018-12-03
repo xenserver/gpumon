@@ -2,5 +2,5 @@
 (executable
  (name gpumon)
  (public_name gpumon)
- (libraries threads rrdd-plugin xcp.gpumon gpumon_lib))
+ (libraries threads rrdd-plugin xapi-idl.gpumon gpumon_lib))
 

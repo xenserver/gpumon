@@ -8,12 +8,12 @@ build: [
   ["dune" "runtest" "-p" name "-j" jobs] {with-test}
 ]
 depends: [
-  "base-threads"     
+  "base-threads"
   "ounit"
   "result"
   "rrdd-plugin"
   "stdext"
-  "xcp"
+  "xapi-idl"
 ]
 dev-repo: "git://github.com/xenserver/gpumon"
 synopsis: "The XenServer GPU monitoring daemon"
