@@ -47,6 +47,8 @@ CAMLprim value stub_nvml_open(value unit) {
     value *exn;
 
     interface = malloc(sizeof(nvmlInterface));
+    if (!interface)
+        caml_failwith("malloc failed in stub_nvml_open()");
 
     // Open the library.
     interface->handle = dlopen("libnvidia-ml.so.1", RTLD_LAZY);

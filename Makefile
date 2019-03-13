@@ -8,11 +8,12 @@ LIBEXECDIR 	?= /opt/xensource/libexec
 PLUGINS     	= $(DESTDIR)$(LIBEXECDIR)/xcp-rrdd-plugins
 BUILD       	= _build/default
 DUNE 		= dune
+PROFILE 	= release
 
 .PHONY: install all clean test mock
 
 all:
-	$(DUNE) build
+	$(DUNE) build --profile=$(PROFILE)
 
 install: all
 	install -D -m 755 $(BUILD)/gpumon/gpumon.exe $(PLUGINS)/xcp-rrdd-gpumon

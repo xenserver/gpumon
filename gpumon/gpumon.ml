@@ -288,6 +288,7 @@ let start server =
   ()
 
 let handle_shutdown handler () =
+  Process.D.info "Installing signal handlers at %s" __LOC__;
   Sys.set_signal Sys.sigterm (Sys.Signal_handle handler);
   Sys.set_signal Sys.sigint  (Sys.Signal_handle handler);
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore
@@ -317,6 +318,7 @@ let () =
       | Some interface -> close_nvml_interface interface
       | None -> ()
     in
+    Process.D.info "Caught signal in %s" __LOC__;
     Process.D.info "Received signal %d: deregistering plugin %s..." signal plugin_name;
     exit 0
   in
