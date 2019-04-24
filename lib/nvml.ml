@@ -34,6 +34,7 @@ type vgpu_metadata = string
 
 type vgpu_instance = int
 type vm_domid = string
+type vgpu_uuid = string
 
 type vgpu_compatibility_t
 
@@ -84,6 +85,8 @@ external device_get_active_vgpus: interface -> device -> vgpu_instance list =
   "stub_nvml_device_get_active_vgpus"
 external vgpu_instance_get_vm_domid: interface -> vgpu_instance -> vm_domid = 
   "stub_nvml_vgpu_instance_get_vm_id"
+external vgpu_instance_get_vgpu_uuid: interface -> vgpu_instance -> vgpu_uuid = 
+  "stub_nvml_vgpu_instance_get_vgpu_uuid"
 
 external get_vgpu_metadata: interface -> vgpu_instance -> vgpu_metadata =
   "stub_nvml_get_vgpu_metadata"
@@ -103,4 +106,11 @@ let get_vgpus_for_vm iface device vm_domid =
   List.filter_map (fun vgpu ->
       match vgpu_instance_get_vm_domid iface vgpu with 
       | domid when domid = vm_domid -> Some vgpu
+      | _ -> None) vgpus
+
+let get_vgpu_for_uuid iface vgpu_uuid vgpus =
+  let open Stdext.Listext in
+  List.filter_map (fun vgpu ->
+      match vgpu_instance_get_vgpu_uuid iface vgpu with 
+      | uuid when uuid = vgpu_uuid -> Some vgpu
       | _ -> None) vgpus

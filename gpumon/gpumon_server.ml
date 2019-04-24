@@ -17,7 +17,7 @@ module type IMPLEMENTATION = sig
   
   module Nvidia: sig
     val get_pgpu_metadata           : debug_info -> pgpu_address         -> nvidia_pgpu_metadata
-    val get_vgpu_metadata           : debug_info -> domid                -> pgpu_address              -> nvidia_vgpu_metadata list
+    val get_vgpu_metadata           : debug_info -> domid                -> pgpu_address              -> vgpu_uuid            -> nvidia_vgpu_metadata list
     val get_pgpu_vm_compatibility   : debug_info -> pgpu_address         -> domid                     -> nvidia_pgpu_metadata -> compatibility
     val get_pgpu_vgpu_compatibility : debug_info -> nvidia_pgpu_metadata -> nvidia_vgpu_metadata list -> compatibility
   end
@@ -70,12 +70,17 @@ module Make(I: Interface):IMPLEMENTATION = struct
       | Gpumon_interface.(Gpumon_error (NvmlFailure _)) as err -> raise err
       | err -> raise Gpumon_interface.(Gpumon_error (NvmlFailure (Printexc.to_string err)))
 
-    let get_vgpu_metadata _dbg domid pgpu_address =
+    let get_vgpu_metadata _dbg domid pgpu_address vgpu_uuid =
       let interface = get_interface_exn () in
       let domid'    = string_of_int domid  in
+      let filter_instances = match vgpu_uuid with
+           | "" -> List.map (fun vgpu -> vgpu)
+           | _ -> Nvml.get_vgpu_for_uuid interface vgpu_uuid
+      in
       try
         Nvml.device_get_handle_by_pci_bus_id interface pgpu_address
         |> (fun device -> Nvml.get_vgpus_for_vm interface device domid')
+        |> filter_instances
         |> List.map (Nvml.get_vgpu_metadata interface)
       with err ->
         raise Gpumon_interface.(Gpumon_error (NvmlFailure (Printexc.to_string err)))
@@ -134,6 +139,6 @@ module Make(I: Interface):IMPLEMENTATION = struct
       get_pgpu_vgpu_compatibility
         dbg
         pgpu_metadata
-        (get_vgpu_metadata dbg domid pgpu_address)
+        (get_vgpu_metadata dbg domid pgpu_address "")
   end
 end
