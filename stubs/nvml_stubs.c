@@ -36,6 +36,7 @@ typedef struct nvmlInterface {
     nvmlReturn_t (*vgpuInstanceGetMetadata)(nvmlVgpuInstance_t, nvmlVgpuMetadata_t*, unsigned int*);
     nvmlReturn_t (*deviceGetActiveVgpus)(nvmlDevice_t, unsigned int*, nvmlVgpuInstance_t*);
     nvmlReturn_t (*vgpuInstanceGetVmID)(nvmlVgpuInstance_t, char*, unsigned int, nvmlVgpuVmIdType_t*);
+    nvmlReturn_t (*vgpuInstanceGetUUID)(nvmlVgpuInstance_t, char*, unsigned int);
     nvmlReturn_t (*getVgpuCompatibility)(nvmlVgpuMetadata_t*, nvmlVgpuPgpuMetadata_t*, nvmlVgpuPgpuCompatibility_t*);
 } nvmlInterface;
 
@@ -169,6 +170,13 @@ CAMLprim value stub_nvml_open(value unit) {
     interface->vgpuInstanceGetVmID =
         dlsym(interface->handle, STR(nvmlVgpuInstanceGetVmID));
     if(!interface->vgpuInstanceGetVmID) {
+        goto SymbolError;
+    }
+
+    // Load nvmlVgpuInstanceGetUUID.
+    interface->vgpuInstanceGetUUID =
+        dlsym(interface->handle, STR(nvmlVgpuInstanceGetUUID));
+    if(!interface->vgpuInstanceGetUUID) {
         goto SymbolError;
     }
 
@@ -612,6 +620,33 @@ CAMLprim value stub_nvml_vgpu_instance_get_vm_id(
     free(vmIdType);
 
     CAMLreturn(ml_vm_id);
+}
+
+CAMLprim value stub_nvml_vgpu_instance_get_vgpu_uuid(
+        value ml_interface,
+        value ml_vgpu_instance) {
+    CAMLparam2(ml_interface, ml_vgpu_instance);
+    CAMLlocal1(ml_vgpu_uuid);
+
+    nvmlReturn_t error;
+    nvmlInterface* interface;
+    nvmlVgpuInstance_t vgpuInstance;
+    char uuid[80];
+    
+    // The VGPU UUID is returned as a string,
+    // not exceeding 80 characters in length (including the NUL terminator).
+    interface = (nvmlInterface*)ml_interface;
+    vgpuInstance = (nvmlVgpuInstance_t)Int_val(ml_vgpu_instance);
+    
+    error = interface->vgpuInstanceGetUUID(vgpuInstance, uuid, 80);
+    if (error != NVML_SUCCESS) {
+      caml_failwith("Failed to obtain UUID.");
+      check_error(interface, error);
+    }
+    
+    ml_vgpu_uuid = caml_copy_string(uuid);
+
+    CAMLreturn(ml_vgpu_uuid);
 }
 
 CAMLprim value stub_nvml_get_pgpu_vgpu_compatibility(
