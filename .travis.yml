@@ -11,6 +11,5 @@ env:
     - PACKAGE=gpumon
     - PINS="gpumon:."
     - BASE_REMOTE="https://github.com/xapi-project/xs-opam.git"
-    - BASE_REMOTE_BRANCH="feature/REQ-720/master"
   matrix:
     - DISTRO="debian-9-ocaml-4.07"
