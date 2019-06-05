@@ -84,6 +84,8 @@ let device_get_active_vgpus _interface _device = []
 
 let vgpu_instance_get_vm_domid _interface _vgpu_instance = ""
 
+let vgpu_instance_get_vgpu_uuid _interface _vgpu_instance = ""
+
 let get_vgpu_metadata _interface _vgpu_instance = ""
 
 let get_pgpu_vgpu_compatibility _interface _vgpu_metadata _pgpu_metadata = ()
@@ -93,3 +95,5 @@ let vgpu_compat_get_vm_compat _vgpu_compatibility_t = []
 let vgpu_compat_get_pgpu_compat_limit _vgpu_compatibility_t = []
 
 let get_vgpus_for_vm _iface _device _vm_domid = []
+
+let get_vgpu_for_uuid _iface _vgpu_uuid _vgpus = []
