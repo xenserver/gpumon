@@ -6,6 +6,20 @@ module Process = Process (struct let name = plugin_name end)
 
 let nvidia_vendor_id = 0x10del
 
+let acquire_nvml_interface () =
+  let rec loop delay =
+    match Nvml.NVML.get () with
+    | Some interface ->
+        interface
+    | None ->
+        Process.D.info
+          "Could not open NVML interface - will try again in %5.1f seconds"
+          delay ;
+        Thread.delay delay ;
+        loop (min (delay *. 1.2) 60.0)
+  in
+  loop 5.0
+
 let default_config : (int32 * Gpumon_config.config) list =
   let open Gpumon_config in
   [
@@ -272,35 +286,6 @@ let generate_all_gpu_dss interface gpus =
     )
     [] gpus
 
-(** Open and initialise an interface to the NVML library. Close the library if
- *  initialisation fails. *)
-let open_nvml_interface () =
-  let interface = Nvml.library_open () in
-  try Nvml.init interface ; interface
-  with e ->
-    Nvml.library_close interface ;
-    raise e
-
-let open_nvml_interface_noexn () =
-  try Some (open_nvml_interface ())
-  with e ->
-    ( match e with
-    | Nvml.Library_not_loaded msg ->
-        Process.D.error "NVML interface not loaded: %s" msg
-    | Nvml.Symbol_not_loaded msg ->
-        Process.D.error "NVML missing expected symbol: %s" msg
-    | e ->
-        Process.D.error "Caught unexpected error initialising NVML: %s"
-          (Printexc.to_string e)
-    ) ;
-    None
-
-(** Shutdown and close an interface to the NVML library. *)
-let close_nvml_interface interface =
-  Xapi_stdext_pervasives.Pervasiveext.finally
-    (fun () -> Nvml.shutdown interface)
-    (fun () -> Nvml.library_close interface)
-
 let start server =
   let (_ : Thread.t) =
     Thread.create (fun () -> Xcp_service.serve_forever server) ()
@@ -325,28 +310,25 @@ module Make (Impl : Gpumon_server.IMPLEMENTATION) = struct
     Server.Nvidia.get_pgpu_vgpu_compatibility
       Impl.Nvidia.get_pgpu_vgpu_compatibility ;
     Server.Nvidia.get_pgpu_vm_compatibility
-      Impl.Nvidia.get_pgpu_vm_compatibility
+      Impl.Nvidia.get_pgpu_vm_compatibility ;
+    Server.Nvidia.nvml_attach Impl.Nvidia.attach ;
+    Server.Nvidia.nvml_detach Impl.Nvidia.detach ;
+    Server.Nvidia.nvml_is_attached Impl.Nvidia.is_attached
 end
 
 let () =
   Process.initialise () ;
-  let maybe_interface = open_nvml_interface_noexn () in
+  Nvml.NVML.attach () ;
   (* Define the new signal handler *)
   let stop_handler signal =
-    let _ =
-      match maybe_interface with
-      | Some interface ->
-          close_nvml_interface interface
-      | None ->
-          ()
-    in
+    Nvml.NVML.detach () ;
     Process.D.info "Caught signal in %s" __LOC__ ;
     Process.D.info "Received signal %d: deregistering plugin %s..." signal
       plugin_name ;
     exit 0
   in
   let module Gpumon_server = Gpumon_server.Make (struct
-    let interface = maybe_interface
+    let interface () = Some (acquire_nvml_interface ())
   end) in
   (* create daemon module to bind server call declarations to implementations *)
   let module Daemon = Make (Gpumon_server) in
@@ -362,27 +344,23 @@ let () =
     start server
   in
   (* gpumon rrdd interface *)
-  let rec rrdd_loop interface =
+  let rec rrdd_loop () =
     try
-      let gpus = get_gpus interface in
-      (* Share one page per GPU - this is plenty for the six datasources per GPU
-         			 * which we currently report. *)
-      let shared_page_count = List.length gpus in
+      let interface = acquire_nvml_interface () in
+      let shared_page_count = get_gpus interface |> List.length in
+      (* Share one page per GPU - this is plenty for the six
+         datasources per GPU which we currently report. *)
+      let dss_f () =
+        let interface = acquire_nvml_interface () in
+        let gpus = get_gpus interface in
+        generate_all_gpu_dss interface gpus
+      in
       Process.main_loop ~neg_shift:0.5
         ~target:(Reporter.Local shared_page_count) ~protocol:Rrd_interface.V2
-        ~dss_f:(fun () -> generate_all_gpu_dss interface gpus
-      )
+        ~dss_f
     with e ->
       Process.D.error "Unexpected exception: %s" (Printexc.to_string e) ;
       Thread.delay 5.0 ;
-      rrdd_loop interface
+      rrdd_loop ()
   in
-  match maybe_interface with
-  | Some interface ->
-      Process.D.info "Opened NVML interface" ;
-      rrdd_loop interface
-  | None ->
-      Process.D.info "Could not open NVML interface - sleeping forever" ;
-      while true do
-        Thread.delay 3600.0
-      done
+  rrdd_loop ()
