@@ -47,7 +47,7 @@ module type IMPLEMENTATION = sig
 end
 
 module type Interface = sig
-  val interface : Nvml.interface option
+  val interface : unit -> Nvml.interface option
 end
 
 module Make (I : Interface) : IMPLEMENTATION = struct
@@ -60,7 +60,7 @@ module Make (I : Interface) : IMPLEMENTATION = struct
     let host_driver_supporting_migration = 390
 
     let get_interface_exn () =
-      match I.interface with
+      match I.interface () with
       | Some interface ->
           interface
       | None ->
