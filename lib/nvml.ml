@@ -135,3 +135,14 @@ let get_vgpu_for_uuid iface vgpu_uuid vgpus =
           None
     )
     vgpus
+
+(* mock implementation *)
+module NVML = struct
+  let attach () = ()
+
+  let detach () = ()
+
+  let is_attached () = true
+
+  let get () : interface option = None
+end

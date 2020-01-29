@@ -37,6 +37,12 @@ module type IMPLEMENTATION = sig
       -> nvidia_pgpu_metadata
       -> nvidia_vgpu_metadata list
       -> compatibility
+
+    val attach : debug_info -> unit
+
+    val detach : debug_info -> unit
+
+    val is_attached : debug_info -> bool
   end
 end
 
@@ -174,5 +180,15 @@ module Make (I : Interface) : IMPLEMENTATION = struct
     let get_pgpu_vm_compatibility dbg pgpu_address domid pgpu_metadata =
       get_pgpu_vgpu_compatibility dbg pgpu_metadata
         (get_vgpu_metadata dbg domid pgpu_address "")
+
+    let fail exn =
+      raise
+        Gpumon_interface.(Gpumon_error (NvmlFailure (Printexc.to_string exn)))
+
+    let attach _dbg = try Nvml.NVML.attach () with exn -> fail exn
+
+    let detach _dbg = try Nvml.NVML.detach () with exn -> fail exn
+
+    let is_attached _dbg = try Nvml.NVML.is_attached () with exn -> fail exn
   end
 end
