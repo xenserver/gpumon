@@ -1,4 +1,4 @@
 (library
  (name gpumon_lib)
  (wrapped false)
- (libraries nvml_stubs rresult xapi-stdext-unix))
+ (libraries nvml_stubs xapi-log rresult xapi-stdext-unix))

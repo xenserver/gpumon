@@ -6,6 +6,48 @@ module Process = Process (struct let name = plugin_name end)
 
 let nvidia_vendor_id = 0x10del
 
+let vgpu_config_dir = "/usr/share/nvidia/vgpu"
+
+(* acquire NVML interface but give up after timeout. Note that this does
+   not attach the NVML libarary but it waits for someone else to attach it
+   if necessary. *)
+let get_nvml_or_wait ?(timeout = 30.0) () =
+  let rec loop delay waited =
+    match Nvml.NVML.get () with
+    | Some _ as interface ->
+        interface
+    | None when waited > timeout ->
+        Process.D.info "Could not open NVML interface - giving up" ;
+        None
+    | None ->
+        Process.D.info "Could not open NVML interface - retry in %4.1f" delay ;
+        Thread.delay delay ;
+        loop (delay *. 1.2) (waited +. delay)
+  in
+  match Sys.file_exists vgpu_config_dir with
+  | true ->
+      loop 2.0 0.0
+  | false ->
+      Process.D.info "%s not found - assuming NVML library unavailable"
+        vgpu_config_dir ;
+      None
+
+(* Like get_nvml_or_wait but keep looping. Only call this in a thread
+   that does not block the main interaction like the RPC server. Again,
+   this is not attaching the library but waits for it to be attached by
+   some other thread. *)
+let get_nvml_or_wait_forever () =
+  let rec try_again_after delay =
+    match get_nvml_or_wait () with
+    | Some interface ->
+        interface
+    | None ->
+        Process.D.info "Failed to open NVML interface - retrying in %4.0f" delay ;
+        Thread.delay delay ;
+        try_again_after (min (delay *. 1.5) (20.0 *. 60.0))
+  in
+  try_again_after 60.0
+
 let default_config : (int32 * Gpumon_config.config) list =
   let open Gpumon_config in
   [
@@ -272,35 +314,6 @@ let generate_all_gpu_dss interface gpus =
     )
     [] gpus
 
-(** Open and initialise an interface to the NVML library. Close the library if
- *  initialisation fails. *)
-let open_nvml_interface () =
-  let interface = Nvml.library_open () in
-  try Nvml.init interface ; interface
-  with e ->
-    Nvml.library_close interface ;
-    raise e
-
-let open_nvml_interface_noexn () =
-  try Some (open_nvml_interface ())
-  with e ->
-    ( match e with
-    | Nvml.Library_not_loaded msg ->
-        Process.D.error "NVML interface not loaded: %s" msg
-    | Nvml.Symbol_not_loaded msg ->
-        Process.D.error "NVML missing expected symbol: %s" msg
-    | e ->
-        Process.D.error "Caught unexpected error initialising NVML: %s"
-          (Printexc.to_string e)
-    ) ;
-    None
-
-(** Shutdown and close an interface to the NVML library. *)
-let close_nvml_interface interface =
-  Xapi_stdext_pervasives.Pervasiveext.finally
-    (fun () -> Nvml.shutdown interface)
-    (fun () -> Nvml.library_close interface)
-
 let start server =
   let (_ : Thread.t) =
     Thread.create (fun () -> Xcp_service.serve_forever server) ()
@@ -335,23 +348,16 @@ let doc = "GPU monitoring daemon"
 
 let () =
   Process.initialise () ;
-  let maybe_interface = open_nvml_interface_noexn () in
   (* Define the new signal handler *)
   let stop_handler signal =
-    let _ =
-      match maybe_interface with
-      | Some interface ->
-          close_nvml_interface interface
-      | None ->
-          ()
-    in
+    Nvml.NVML.detach () ;
     Process.D.info "Caught signal in %s" __LOC__ ;
     Process.D.info "Received signal %d: deregistering plugin %s..." signal
       plugin_name ;
     exit 0
   in
   let module Gpumon_server = Gpumon_server.Make (struct
-    let interface = maybe_interface
+    let interface () = get_nvml_or_wait ()
   end) in
   (* create daemon module to bind server call declarations to implementations *)
   let module Daemon = Make (Gpumon_server) in
@@ -363,33 +369,33 @@ let () =
       ()
   in
   (* call after setting up RPC server to catch unimplemented API errors early *)
-  Xcp_service.configure ();
+  Xcp_service.configure () ;
+  ( try Nvml.NVML.attach ()
+    with e ->
+      Process.D.error "%s NVML attach failed: %s" __LOC__ (Printexc.to_string e)
+  ) ;
   let _ =
     handle_shutdown stop_handler () ;
     start server
   in
   (* gpumon rrdd interface *)
-  let rec rrdd_loop interface =
+  let rec rrdd_loop () =
     try
-      let gpus = get_gpus interface in
-      (* Share one page per GPU - this is plenty for the six datasources per GPU
-         			 * which we currently report. *)
-      let shared_page_count = List.length gpus in
+      let interface = get_nvml_or_wait_forever () in
+      let shared_page_count = get_gpus interface |> List.length in
+      (* Share one page per GPU - this is plenty for the six
+         datasources per GPU which we currently report. *)
+      let dss_f () =
+        let interface = get_nvml_or_wait_forever () in
+        let gpus = get_gpus interface in
+        generate_all_gpu_dss interface gpus
+      in
       Process.main_loop ~neg_shift:0.5
         ~target:(Reporter.Local shared_page_count) ~protocol:Rrd_interface.V2
-        ~dss_f:(fun () -> generate_all_gpu_dss interface gpus
-      )
+        ~dss_f
     with e ->
       Process.D.error "Unexpected exception: %s" (Printexc.to_string e) ;
       Thread.delay 5.0 ;
-      rrdd_loop interface
+      rrdd_loop ()
   in
-  match maybe_interface with
-  | Some interface ->
-      Process.D.info "Opened NVML interface" ;
-      rrdd_loop interface
-  | None ->
-      Process.D.info "Could not open NVML interface - sleeping forever" ;
-      while true do
-        Thread.delay 3600.0
-      done
+  rrdd_loop ()
