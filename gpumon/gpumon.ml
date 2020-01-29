@@ -325,7 +325,10 @@ module Make (Impl : Gpumon_server.IMPLEMENTATION) = struct
     Server.Nvidia.get_pgpu_vgpu_compatibility
       Impl.Nvidia.get_pgpu_vgpu_compatibility ;
     Server.Nvidia.get_pgpu_vm_compatibility
-      Impl.Nvidia.get_pgpu_vm_compatibility
+      Impl.Nvidia.get_pgpu_vm_compatibility ;
+    Server.Nvidia.nvml_attach Impl.Nvidia.attach ;
+    Server.Nvidia.nvml_detach Impl.Nvidia.detach ;
+    Server.Nvidia.nvml_is_attached Impl.Nvidia.is_attached
 end
 
 let () =

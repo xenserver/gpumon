@@ -100,3 +100,13 @@ let vgpu_compat_get_pgpu_compat_limit _vgpu_compatibility_t = []
 let get_vgpus_for_vm _iface _device _vm_domid = []
 
 let get_vgpu_for_uuid _iface _vgpu_uuid _vgpus = []
+
+module NVML = struct
+  let attach () = ()
+
+  let detach () = ()
+
+  let is_attached () = true
+
+  let get () : interface option = None
+end
