@@ -33,3 +33,5 @@ mock:
 	cp mocks/mock.ml lib/nvml.ml
 	cp mocks/mock.c  stubs/nvml_stubs.c
 
+unmock:
+	git checkout -- lib/nvml.ml stubs/nvml_stubs.c
