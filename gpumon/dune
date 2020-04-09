@@ -1,6 +1,13 @@
-
 (executable
  (name gpumon)
  (public_name gpumon)
- (libraries threads rrdd-plugin xapi-idl.gpumon gpumon_lib))
-
+ (libraries
+   gpumon_lib
+   rrdd-plugin
+   threads
+   xapi-idl.gpumon
+   xapi-stdext-pervasives
+   xapi-stdext-std
+   xapi-stdext-unix
+ )
+)

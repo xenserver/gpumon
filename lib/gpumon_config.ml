@@ -1,5 +1,5 @@
-open Stdext
-open Rresult
+open Rresult.R.Infix
+module Unixext = Xapi_stdext_unix.Unixext
 
 (** Like List.map, but will return an Error if and when f returns an Error. *)
 let bind_map f items =

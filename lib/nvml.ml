@@ -81,11 +81,11 @@ external pgpu_metadata_get_pgpu_revision: pgpu_metadata -> int =
 external pgpu_metadata_get_pgpu_host_driver_version: pgpu_metadata -> string =
   "stub_pgpu_metadata_get_pgpu_host_driver_version"
 
-external device_get_active_vgpus: interface -> device -> vgpu_instance list = 
+external device_get_active_vgpus: interface -> device -> vgpu_instance list =
   "stub_nvml_device_get_active_vgpus"
-external vgpu_instance_get_vm_domid: interface -> vgpu_instance -> vm_domid = 
+external vgpu_instance_get_vm_domid: interface -> vgpu_instance -> vm_domid =
   "stub_nvml_vgpu_instance_get_vm_id"
-external vgpu_instance_get_vgpu_uuid: interface -> vgpu_instance -> vgpu_uuid = 
+external vgpu_instance_get_vgpu_uuid: interface -> vgpu_instance -> vgpu_uuid =
   "stub_nvml_vgpu_instance_get_vgpu_uuid"
 
 external get_vgpu_metadata: interface -> vgpu_instance -> vgpu_metadata =
@@ -102,15 +102,13 @@ external vgpu_compat_get_pgpu_compat_limit: vgpu_compatibility_t -> pgpu_compat_
 (* The functions below could raise any of the nvml errors raised from the stubs *)
 let get_vgpus_for_vm iface device vm_domid =
   let vgpus = device_get_active_vgpus iface device in
-  let open Stdext.Listext in
   List.filter_map (fun vgpu ->
-      match vgpu_instance_get_vm_domid iface vgpu with 
+      match vgpu_instance_get_vm_domid iface vgpu with
       | domid when domid = vm_domid -> Some vgpu
       | _ -> None) vgpus
 
 let get_vgpu_for_uuid iface vgpu_uuid vgpus =
-  let open Stdext.Listext in
   List.filter_map (fun vgpu ->
-      match vgpu_instance_get_vgpu_uuid iface vgpu with 
+      match vgpu_instance_get_vgpu_uuid iface vgpu with
       | uuid when uuid = vgpu_uuid -> Some vgpu
       | _ -> None) vgpus

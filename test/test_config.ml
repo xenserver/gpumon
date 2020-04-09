@@ -1,7 +1,6 @@
 open OUnit
 
 let string_of_result =
-  let open Rresult in
   function
   | Error (`Parse_failure msg) -> Printf.sprintf "Parse_failure %s" msg
   | Error (`Unknown_version version) ->
@@ -122,7 +121,6 @@ let v2_mixed_config =
 
 let tests =
   let open Gpumon_config in
-  let open Rresult in
   [
     "test_does_not_exist.conf", Error `Does_not_exist;
     "test_unknown_version.conf", Error (`Unknown_version "\"4\"");
