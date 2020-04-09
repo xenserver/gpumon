@@ -14,7 +14,7 @@
 
 module type IMPLEMENTATION = sig
   open Gpumon_interface
-  
+
   module Nvidia: sig
     val get_pgpu_metadata           : debug_info -> pgpu_address         -> nvidia_pgpu_metadata
     val get_vgpu_metadata           : debug_info -> domid                -> pgpu_address              -> vgpu_uuid            -> nvidia_vgpu_metadata list
@@ -109,7 +109,6 @@ module Make(I: Interface):IMPLEMENTATION = struct
          * if this is not the case we consider it an internal error *)
         failwith (Printf.sprintf "No vGPU available")
       | compatibility ->
-        let open Stdext.Listext in
         let vm_compat, limits = List.split compatibility in
         let support_live_migration =
           vm_compat
@@ -118,18 +117,16 @@ module Make(I: Interface):IMPLEMENTATION = struct
         in
         let failures =
           limits
-          |> List.filter ((<>) [Nvml.None])
           |> List.concat
-          |> List.setify
-          |> List.map (function
-              | Nvml.HostDriver  -> Gpumon_interface.Host_driver
-              | Nvml.GuestDriver -> Gpumon_interface.Guest_driver
-              | Nvml.GPU         -> Gpumon_interface.GPU
-              | Nvml.Other       -> Gpumon_interface.Other
-              (* NOTE: replace this failwith with `-> .`
-               * after we upgrade the compiler *)
-              | Nvml.None        -> failwith "This should never happen"
-            ) in
+          |> List.filter_map (function
+              | Nvml.HostDriver  -> Some Gpumon_interface.Host_driver
+              | Nvml.GuestDriver -> Some Gpumon_interface.Guest_driver
+              | Nvml.GPU         -> Some Gpumon_interface.GPU
+              | Nvml.Other       -> Some Gpumon_interface.Other
+              | Nvml.None        -> None
+            )
+          |> Xapi_stdext_std.Listext.List.setify
+        in
         match support_live_migration, failures with
         | true, [] -> Gpumon_interface.Compatible
         | _, _ -> Gpumon_interface.(Incompatible failures)

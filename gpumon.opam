@@ -1,22 +1,21 @@
 opam-version: "2.0"
+synopsis: "The XenServer GPU monitoring daemon"
 maintainer: "xen-api@lists.xen.org"
-authors: [ "John Else" ]
+authors: "John Else"
 homepage: "https://github.com/xenserver/gpumon"
 bug-reports: "https://github.com/xenserver/gpumon/issues"
+depends: [
+  "base-threads"
+  "ounit" {with-test}
+  "rresult"
+  "rrdd-plugin"
+  "xapi-idl"
+  "xapi-stdext-pervasives"
+  "xapi-stdext-std"
+  "xapi-stdext-unix"
+]
 build: [
   ["dune" "build" "-p" name "-j" jobs]
   ["dune" "runtest" "-p" name "-j" jobs] {with-test}
 ]
-depends: [
-  "base-threads"
-  "ounit"
-  "result"
-  "rrdd-plugin"
-  "stdext"
-  "xapi-idl"
-]
 dev-repo: "git://github.com/xenserver/gpumon"
-synopsis: "The XenServer GPU monitoring daemon"
-
-
-
