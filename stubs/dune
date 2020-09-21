@@ -1,4 +1,6 @@
 (library
  (name nvml_stubs)
  (wrapped false)
- (c_names nvml_stubs))
+ (foreign_stubs
+  (language c)
+  (names nvml_stubs)))

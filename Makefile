@@ -24,6 +24,10 @@ clean:
 test:
 	$(DUNE) runtest
 
+
+format:
+	$(DUNE) build @fmt --auto-promote
+
 mock:
 	cp mocks/mock.ml lib/nvml.ml
 	cp mocks/mock.c  stubs/nvml_stubs.c

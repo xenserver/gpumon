@@ -10,25 +10,28 @@ type enable_state = Disabled | Enabled
 
 type memory_info = {total: int64; free: int64; used: int64}
 
-type pci_info =
-  { bus_id: string
+type pci_info = {
+    bus_id: string
   ; domain: int32
   ; bus: int32
   ; device: int32
   ; pci_device_id: int32
-  ; pci_subsystem_id: int32 }
+  ; pci_subsystem_id: int32
+}
 
 type utilization = {gpu: int; memory: int}
 
 let memory_info = {total= 0L; free= 0L; used= 0L}
 
 let pci_info =
-  { bus_id= ""
+  {
+    bus_id= ""
   ; domain= 0l
   ; bus= 0l
   ; device= 0l
   ; pci_device_id= 0l
-  ; pci_subsystem_id= 0l }
+  ; pci_subsystem_id= 0l
+  }
 
 let utilization = {gpu= 0; memory= 0}
 
