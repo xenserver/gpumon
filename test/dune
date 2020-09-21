@@ -1,12 +1,4 @@
-
-(executable
-  (name test_main)
-  (libraries
-   gpumon_lib oUnit))
-
-(alias
-  (name runtest)
-  (deps test_main.exe (source_tree data))
-  (action (run ./test_main.exe)))
-
-
+(test
+ (name test_main)
+ (deps (source_tree data))
+ (libraries gpumon_lib oUnit))
