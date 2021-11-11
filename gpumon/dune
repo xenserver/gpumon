@@ -2,4 +2,4 @@
  (name gpumon)
  (public_name gpumon)
  (libraries gpumon_lib rrdd-plugin threads xapi-idl.gpumon
-   xapi-stdext-pervasives xapi-stdext-std xapi-stdext-unix))
+   xapi-stdext-pervasives xapi-stdext-unix))

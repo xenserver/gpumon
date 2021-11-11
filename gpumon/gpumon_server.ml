@@ -144,9 +144,7 @@ module Make (I : Interface) : IMPLEMENTATION = struct
       | compatibility -> (
           let vm_compat, limits = List.split compatibility in
           let support_live_migration =
-            vm_compat
-            |> List.map (List.mem Nvml.Live)
-            |> List.fold_left ( && ) true
+            List.for_all (List.mem Nvml.Live) vm_compat
           in
           let failures =
             limits
@@ -163,13 +161,14 @@ module Make (I : Interface) : IMPLEMENTATION = struct
                  | Nvml.None ->
                      None
                  )
-            |> Xapi_stdext_std.Listext.List.setify
           in
           match (support_live_migration, failures) with
           | true, [] ->
               Gpumon_interface.Compatible
           | _, _ ->
-              Gpumon_interface.(Incompatible failures)
+              Gpumon_interface.(
+                Incompatible (List.sort_uniq Stdlib.compare failures)
+              )
         )
 
     let get_pgpu_vm_compatibility dbg pgpu_address domid pgpu_metadata =
