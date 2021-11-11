@@ -71,7 +71,8 @@ module Make (I : Interface) : IMPLEMENTATION = struct
         let version, revision, driver =
           ( Nvml.pgpu_metadata_get_pgpu_version compat
           , Nvml.pgpu_metadata_get_pgpu_revision compat
-          , Nvml.pgpu_metadata_get_pgpu_host_driver_version compat )
+          , Nvml.pgpu_metadata_get_pgpu_host_driver_version compat
+          )
         in
         let major = Scanf.sscanf driver "%d." (fun x -> x) in
         info "%s: pGPU version=%d revision=%d driver='%s' (%d)" this version
@@ -91,7 +92,8 @@ module Make (I : Interface) : IMPLEMENTATION = struct
       | err ->
           raise
             Gpumon_interface.(
-              Gpumon_error (NvmlFailure (Printexc.to_string err)))
+              Gpumon_error (NvmlFailure (Printexc.to_string err))
+            )
 
     let get_vgpu_metadata _dbg domid pgpu_address vgpu_uuid =
       let interface = get_interface_exn () in
@@ -124,13 +126,15 @@ module Make (I : Interface) : IMPLEMENTATION = struct
                 pgpu_metadata
             in
             ( Nvml.vgpu_compat_get_vm_compat vgpu_compat
-            , Nvml.vgpu_compat_get_pgpu_compat_limit vgpu_compat )
+            , Nvml.vgpu_compat_get_pgpu_compat_limit vgpu_compat
+            )
           in
           List.map vgpu_to_compat vgpu_metadata
         with err ->
           raise
             Gpumon_interface.(
-              Gpumon_error (NvmlFailure (Printexc.to_string err)))
+              Gpumon_error (NvmlFailure (Printexc.to_string err))
+            )
       in
       match compatibility with
       | [] ->
@@ -157,7 +161,8 @@ module Make (I : Interface) : IMPLEMENTATION = struct
                  | Nvml.Other ->
                      Some Gpumon_interface.Other
                  | Nvml.None ->
-                     None)
+                     None
+                 )
             |> Xapi_stdext_std.Listext.List.setify
           in
           match (support_live_migration, failures) with
