@@ -11,7 +11,6 @@ depends: [
   "rrdd-plugin"
   "xapi-idl"
   "xapi-stdext-pervasives"
-  "xapi-stdext-std"
   "xapi-stdext-unix"
 ]
 build: [

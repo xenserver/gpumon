@@ -43,7 +43,8 @@ let default_config : (int32 * Gpumon_config.config) list =
                 ]
             }
           ]
-      } )
+      }
+    )
   ]
 
 let categorise_metrics =
@@ -55,7 +56,8 @@ let categorise_metrics =
       | Gpumon_config.Other x ->
           (memory_metrics, x :: other_metrics, utilisation_metrics)
       | Gpumon_config.Utilisation x ->
-          (memory_metrics, other_metrics, x :: utilisation_metrics))
+          (memory_metrics, other_metrics, x :: utilisation_metrics)
+      )
     ([], [], [])
 
 (** NVML returns the PCI ID and PCI subsystem ID as int32s, where the most
@@ -85,7 +87,8 @@ let get_required_metrics config pci_info =
           | Match id ->
               id = subsystem_device_id
           | Any ->
-              true)
+              true
+          )
         vendor_config.device_types
     in
     Some (categorise_metrics device.metrics)
@@ -172,14 +175,17 @@ let generate_gpu_dss interface gpu =
                     ~name:("gpu_memory_free_" ^ gpu.bus_id_escaped)
                     ~description:"Unallocated framebuffer memory"
                     ~value:(Rrd.VT_Int64 memory_info.Nvml.free) ~ty:Rrd.Gauge
-                    ~default:false ~units:"B" () )
+                    ~default:false ~units:"B" ()
+                )
             | Gpumon_config.Used ->
                 ( Rrd.Host
                 , Ds.ds_make
                     ~name:("gpu_memory_used_" ^ gpu.bus_id_escaped)
                     ~description:"Allocated framebuffer memory"
                     ~value:(Rrd.VT_Int64 memory_info.Nvml.used) ~ty:Rrd.Gauge
-                    ~default:false ~units:"B" () ))
+                    ~default:false ~units:"B" ()
+                )
+            )
           metrics
   in
   let other_dss =
@@ -194,7 +200,8 @@ let generate_gpu_dss interface gpu =
                 ~name:("gpu_power_usage_" ^ gpu.bus_id_escaped)
                 ~description:"Power usage of this GPU"
                 ~value:(Rrd.VT_Int64 (Int64.of_int power_usage))
-                ~ty:Rrd.Gauge ~default:false ~units:"mW" () )
+                ~ty:Rrd.Gauge ~default:false ~units:"mW" ()
+            )
         | Gpumon_config.Temperature ->
             let temperature =
               Nvml.device_get_temperature interface gpu.device
@@ -204,7 +211,9 @@ let generate_gpu_dss interface gpu =
                 ~name:("gpu_temperature_" ^ gpu.bus_id_escaped)
                 ~description:"Temperature of this GPU"
                 ~value:(Rrd.VT_Int64 (Int64.of_int temperature))
-                ~ty:Rrd.Gauge ~default:false ~units:"°C" () ))
+                ~ty:Rrd.Gauge ~default:false ~units:"°C" ()
+            )
+        )
       gpu.other_metrics
   in
   let utilisation_dss =
@@ -228,7 +237,8 @@ let generate_gpu_dss interface gpu =
                     ~value:
                       (Rrd.VT_Float (float_of_int utilization.Nvml.gpu /. 100.0))
                     ~ty:Rrd.Gauge ~default:false ~min:0.0 ~max:1.0
-                    ~units:"(fraction)" () )
+                    ~units:"(fraction)" ()
+                )
             | Gpumon_config.MemoryIO ->
                 ( Rrd.Host
                 , Ds.ds_make
@@ -240,9 +250,12 @@ let generate_gpu_dss interface gpu =
                       )
                     ~value:
                       (Rrd.VT_Float
-                         (float_of_int utilization.Nvml.memory /. 100.0))
+                         (float_of_int utilization.Nvml.memory /. 100.0)
+                      )
                     ~ty:Rrd.Gauge ~default:false ~min:0.0 ~max:1.0
-                    ~units:"(fraction)" () ))
+                    ~units:"(fraction)" ()
+                )
+            )
           metrics
   in
   List.fold_left
@@ -255,7 +268,8 @@ let generate_all_gpu_dss interface gpus =
   List.fold_left
     (fun acc gpu ->
       let dss = generate_gpu_dss interface gpu in
-      List.rev_append dss acc)
+      List.rev_append dss acc
+      )
     [] gpus
 
 (** Open and initialise an interface to the NVML library. Close the library if
@@ -356,7 +370,8 @@ let () =
       let shared_page_count = List.length gpus in
       Process.main_loop ~neg_shift:0.5
         ~target:(Reporter.Local shared_page_count) ~protocol:Rrd_interface.V2
-        ~dss_f:(fun () -> generate_all_gpu_dss interface gpus)
+        ~dss_f:(fun () -> generate_all_gpu_dss interface gpus
+      )
     with e ->
       Process.D.error "Unexpected exception: %s" (Printexc.to_string e) ;
       Thread.delay 5.0 ;

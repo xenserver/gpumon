@@ -109,8 +109,7 @@ let _unbox_enum = function
 
 let lookup key dict =
   try Ok (List.assoc key dict)
-  with Not_found ->
-    Error (`Parse_failure (Rpc.Dict dict |> Jsonrpc.to_string))
+  with Not_found -> Error (`Parse_failure (Rpc.Dict dict |> Jsonrpc.to_string))
 
 let id_of_string str =
   try Ok (Scanf.sscanf str "%lx" (fun x -> x))
@@ -127,7 +126,8 @@ let of_v1_format dict =
       (* Return the constructed device type.
          			 * n.b. The V1 format doesn't support specifying a subsystem device ID. *)
       >>=
-      fun metrics -> Ok {device_id; subsystem_device_id= Any; metrics})
+      fun metrics -> Ok {device_id; subsystem_device_id= Any; metrics}
+      )
     dict
   >>| fun device_types -> {device_types}
 
@@ -190,6 +190,8 @@ let to_string config =
   Rpc.Dict
     (List.map
        (fun {device_id; metrics; _} ->
-         (Printf.sprintf "%04lx" device_id, rpc_of_metrics metrics))
-       config.device_types)
+         (Printf.sprintf "%04lx" device_id, rpc_of_metrics metrics)
+         )
+       config.device_types
+    )
   |> Jsonrpc.to_string
