@@ -1,7 +1,6 @@
 #include <dlfcn.h>
 
 #include <nvml.h>
-#include <nvml_grid.h>
 
 #include <string.h>
 
