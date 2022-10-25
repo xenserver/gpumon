@@ -57,7 +57,7 @@ let categorise_metrics =
           (memory_metrics, x :: other_metrics, utilisation_metrics)
       | Gpumon_config.Utilisation x ->
           (memory_metrics, other_metrics, x :: utilisation_metrics)
-      )
+    )
     ([], [], [])
 
 (** NVML returns the PCI ID and PCI subsystem ID as int32s, where the most
@@ -88,7 +88,7 @@ let get_required_metrics config pci_info =
               id = subsystem_device_id
           | Any ->
               true
-          )
+        )
         vendor_config.device_types
     in
     Some (categorise_metrics device.metrics)
@@ -269,7 +269,7 @@ let generate_all_gpu_dss interface gpus =
     (fun acc gpu ->
       let dss = generate_gpu_dss interface gpu in
       List.rev_append dss acc
-      )
+    )
     [] gpus
 
 (** Open and initialise an interface to the NVML library. Close the library if

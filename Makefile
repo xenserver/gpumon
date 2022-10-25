@@ -27,6 +27,7 @@ test:
 
 format:
 	$(DUNE) build @fmt --auto-promote
+	git ls-files '**/*.[ch]' | xargs -n1 indent -nut -kr
 
 mock:
 	cp mocks/mock.ml lib/nvml.ml
