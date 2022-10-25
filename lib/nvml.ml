@@ -122,7 +122,7 @@ let get_vgpus_for_vm iface device vm_domid =
           Some vgpu
       | _ ->
           None
-      )
+    )
     vgpus
 
 let get_vgpu_for_uuid iface vgpu_uuid vgpus =
@@ -133,5 +133,5 @@ let get_vgpu_for_uuid iface vgpu_uuid vgpus =
           Some vgpu
       | _ ->
           None
-      )
+    )
     vgpus

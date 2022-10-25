@@ -138,5 +138,5 @@ let test =
   >::: List.map
          (fun (config_file, expected_result) ->
            config_file >:: fun () -> test_file config_file expected_result
-           )
+         )
          tests

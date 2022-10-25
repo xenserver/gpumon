@@ -127,7 +127,7 @@ let of_v1_format dict =
          			 * n.b. The V1 format doesn't support specifying a subsystem device ID. *)
       >>=
       fun metrics -> Ok {device_id; subsystem_device_id= Any; metrics}
-      )
+    )
     dict
   >>| fun device_types -> {device_types}
 
@@ -191,7 +191,7 @@ let to_string config =
     (List.map
        (fun {device_id; metrics; _} ->
          (Printf.sprintf "%04lx" device_id, rpc_of_metrics metrics)
-         )
+       )
        config.device_types
     )
   |> Jsonrpc.to_string
