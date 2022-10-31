@@ -109,7 +109,6 @@ CAMLprim value stub_nvml_open(value unit)
     if (!interface->deviceGetHandleByPciBusId) {
         goto SymbolError;
     }
-
     // Load nvmlDeviceGetMemoryInfo.
     interface->deviceGetMemoryInfo =
         dlsym(interface->handle, STR(nvmlDeviceGetMemoryInfo));
@@ -434,100 +433,79 @@ CAMLprim value
 stub_nvml_device_get_pgpu_metadata(value ml_interface, value ml_device)
 {
     CAMLparam2(ml_interface, ml_device);
-    CAMLlocal1(ml_pgpu_metadata);
+    CAMLlocal1(ml_metadata);
     nvmlReturn_t error;
     nvmlInterface *interface;
     nvmlDevice_t device;
-    unsigned int pgpuMetadataSize = 0;
-    nvmlVgpuPgpuMetadata_t *pgpuMetadata = NULL;
+    unsigned int metadataSize = 0;
+    nvmlVgpuPgpuMetadata_t *metadata = NULL;
 
     interface = (nvmlInterface *) ml_interface;
     device = *(nvmlDevice_t *) ml_device;
 
-    // Get metadata dynamically increasing the buffer size
-    int dummy;
-    do {
-        error = interface->deviceGetVgpuMetadata(device,
-                                                 (pgpuMetadata) ?
-                                                 pgpuMetadata
-                                                 :
-                                                 (nvmlVgpuPgpuMetadata_t
-                                                  *) & dummy,
-                                                 &pgpuMetadataSize);
-        if ((error == NVML_ERROR_INSUFFICIENT_SIZE)
-            && (pgpuMetadataSize > 0)) {
-            if (pgpuMetadata) {
-                free(pgpuMetadata);
-            }
-            pgpuMetadata = (nvmlVgpuPgpuMetadata_t *)
-                malloc(pgpuMetadataSize);
-            if (!pgpuMetadata) {
-                check_error(interface, NVML_ERROR_MEMORY);
-            }
-        }
+    error =
+        interface->deviceGetVgpuMetadata(device, metadata, &metadataSize);
+    if (error == NVML_SUCCESS) {
+        check_error(interface, NVML_ERROR_MEMORY);      /* should not happen */
     }
-    while ((error == NVML_ERROR_INSUFFICIENT_SIZE)
-           && (pgpuMetadataSize > 0));
-    if (error != NVML_SUCCESS) {
-        free(pgpuMetadata);
+    if (error != NVML_ERROR_INSUFFICIENT_SIZE) {
         check_error(interface, error);
     }
+    metadata = (nvmlVgpuPgpuMetadata_t *) malloc(metadataSize);
+    if (!metadata) {
+        check_error(interface, NVML_ERROR_MEMORY);
+    }
+    error =
+        interface->deviceGetVgpuMetadata(device, metadata, &metadataSize);
+    if (error != NVML_SUCCESS) {
+        free(metadata);
+        check_error(interface, error);
+    }
+    ml_metadata = caml_alloc_string(metadataSize);
+    memcpy(String_val(ml_metadata), metadata, metadataSize);
+    free(metadata);
 
-    ml_pgpu_metadata = caml_alloc_string(pgpuMetadataSize);
-    memcpy(String_val(ml_pgpu_metadata), pgpuMetadata, pgpuMetadataSize);
-    free(pgpuMetadata);
-
-    CAMLreturn(ml_pgpu_metadata);
+    CAMLreturn(ml_metadata);
 }
 
 CAMLprim value
 stub_nvml_get_vgpu_metadata(value ml_interface, value ml_vgpu_instance)
 {
     CAMLparam2(ml_interface, ml_vgpu_instance);
-    CAMLlocal1(ml_vgpu_metadata);
+    CAMLlocal1(ml_metadata);
     nvmlReturn_t error;
     nvmlInterface *interface;
     nvmlVgpuInstance_t vgpu;
-    unsigned int vgpuMetadataSize = 0;
-    nvmlVgpuMetadata_t *vgpuMetadata = NULL;
+    unsigned int metadataSize = 0;
+    nvmlVgpuMetadata_t *metadata = NULL;
 
     interface = (nvmlInterface *) ml_interface;
     vgpu = (nvmlVgpuInstance_t) (Int_val(ml_vgpu_instance));
 
-    // Get metadata dynamically increasing the buffer size
-    int dummy;
-    do {
-        error = interface->vgpuInstanceGetMetadata(vgpu,
-                                                   vgpuMetadata ?
-                                                   vgpuMetadata
-                                                   :
-                                                   (nvmlVgpuMetadata_t
-                                                    *) & dummy,
-                                                   &vgpuMetadataSize);
-        if ((error == NVML_ERROR_INSUFFICIENT_SIZE)
-            && (vgpuMetadataSize > 0)) {
-            if (vgpuMetadata) {
-                free(vgpuMetadata);
-            }
-            vgpuMetadata = (nvmlVgpuMetadata_t *)
-                malloc(vgpuMetadataSize);
-            if (!vgpuMetadata) {
-                check_error(interface, NVML_ERROR_MEMORY);
-            }
-        }
+    error =
+        interface->vgpuInstanceGetMetadata(vgpu, metadata, &metadataSize);
+    if (error == NVML_SUCCESS) {
+        check_error(interface, NVML_ERROR_MEMORY);      /* should not happen */
     }
-    while ((error == NVML_ERROR_INSUFFICIENT_SIZE)
-           && (vgpuMetadataSize > 0));
+    if (error != NVML_ERROR_INSUFFICIENT_SIZE) {
+        check_error(interface, error);
+    }
+    metadata = (nvmlVgpuMetadata_t *) malloc(metadataSize);
+    if (!metadata) {
+        check_error(interface, NVML_ERROR_MEMORY);
+    }
+    error =
+        interface->vgpuInstanceGetMetadata(vgpu, metadata, &metadataSize);
     if (error != NVML_SUCCESS) {
-        free(vgpuMetadata);
+        free(metadata);
         check_error(interface, error);
     }
 
-    ml_vgpu_metadata = caml_alloc_string(vgpuMetadataSize);
-    memcpy(String_val(ml_vgpu_metadata), vgpuMetadata, vgpuMetadataSize);
-    free(vgpuMetadata);
+    ml_metadata = caml_alloc_string(metadataSize);
+    memcpy(String_val(ml_metadata), metadata, metadataSize);
+    free(metadata);
 
-    CAMLreturn(ml_vgpu_metadata);
+    CAMLreturn(ml_metadata);
 }
 
 
@@ -563,7 +541,7 @@ CAMLprim value
 stub_nvml_device_get_active_vgpus(value ml_interface, value ml_device)
 {
     CAMLparam2(ml_interface, ml_device);
-    CAMLlocal2(tail, cons);
+    CAMLlocal2(list, cons);
 
     nvmlReturn_t error;
     nvmlInterface *interface;
@@ -574,47 +552,36 @@ stub_nvml_device_get_active_vgpus(value ml_interface, value ml_device)
 
     interface = (nvmlInterface *) ml_interface;
     device = *(nvmlDevice_t *) ml_device;
+    list = Val_emptylist;
 
-    // Get instances dynamically increasing the buffer size
-    int dummy;
-    do {
-        error = interface->deviceGetActiveVgpus(device,
-                                                &vgpuCount,
-                                                (vgpuInstances) ?
-                                                vgpuInstances
-                                                :
-                                                (nvmlVgpuInstance_t
-                                                 *) & dummy);
-        if ((error == NVML_ERROR_INSUFFICIENT_SIZE)
-            && (vgpuCount > 0)) {
-            if (vgpuInstances) {
-                free(vgpuInstances);
-            }
-            vgpuInstances = (nvmlVgpuInstance_t *)
-                malloc(sizeof(nvmlVgpuInstance_t) * vgpuCount);
-            if (!vgpuInstances) {
-                check_error(interface, NVML_ERROR_MEMORY);
-            }
-        }
+    error =
+        interface->deviceGetActiveVgpus(device, &vgpuCount, vgpuInstances);
+    if (error == NVML_SUCCESS) {
+        CAMLreturn(list);       /* no active vGPU */
     }
-    while ((error == NVML_ERROR_INSUFFICIENT_SIZE) && (vgpuCount > 0));
+    if (error != NVML_ERROR_INSUFFICIENT_SIZE) {
+        check_error(interface, error);
+    }
+    vgpuInstances = (nvmlVgpuInstance_t *)
+        malloc(sizeof(nvmlVgpuInstance_t) * vgpuCount);
+    if (!vgpuInstances) {
+        check_error(interface, NVML_ERROR_MEMORY);
+    }
+    error =
+        interface->deviceGetActiveVgpus(device, &vgpuCount, vgpuInstances);
     if (error != NVML_SUCCESS) {
         free(vgpuInstances);
         check_error(interface, error);
     }
-    // Pack the vgpu instances in an OCaml list
-    tail = Val_emptylist;
 
-    int i;
-    for (i = vgpuCount - 1; i >= 0; i--) {
+    for (int i = vgpuCount - 1; i >= 0; i--) {
         cons = caml_alloc(2, 0);
         Store_field(cons, 0, Val_int(vgpuInstances[i]));
-        Store_field(cons, 1, tail);
-        tail = cons;
+        Store_field(cons, 1, list);
+        list = cons;
     }
-
     free(vgpuInstances);
-    CAMLreturn(tail);
+    CAMLreturn(list);
 }
 
 CAMLprim value
