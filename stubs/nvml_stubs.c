@@ -58,7 +58,7 @@ CAMLprim value stub_nvml_open(value unit)
     CAMLlocal1(ml_interface);
 
     nvmlInterface *interface;
-    value *exn;
+    const value *exn;
 
     interface = malloc(sizeof(nvmlInterface));
     if (!interface)
@@ -272,8 +272,8 @@ stub_nvml_device_get_handle_by_index(value ml_interface, value ml_index)
     check_error(interface, error);
 
     unsigned int deviceSize = sizeof(nvmlDevice_t);
-    ml_device = caml_alloc_string(deviceSize);
-    memcpy(String_val(ml_device), &device, deviceSize);
+    ml_device =
+        caml_alloc_initialized_string(deviceSize, (const char *) &device);
 
     CAMLreturn(ml_device);
 }
@@ -287,7 +287,7 @@ stub_nvml_device_get_handle_by_pci_bus_id(value ml_interface,
 
     nvmlReturn_t error;
     nvmlInterface *interface;
-    char *pciBusId;
+    const char *pciBusId;
     nvmlDevice_t device;
 
     interface = (nvmlInterface *) ml_interface;
@@ -296,9 +296,8 @@ stub_nvml_device_get_handle_by_pci_bus_id(value ml_interface,
     check_error(interface, error);
 
     unsigned int deviceSize = sizeof(nvmlDevice_t);
-    ml_device = caml_alloc_string(deviceSize);
-    memcpy(String_val(ml_device), &device, deviceSize);
-
+    ml_device =
+        caml_alloc_initialized_string(deviceSize, (const char *) &device);
     CAMLreturn(ml_device);
 }
 
@@ -461,8 +460,9 @@ stub_nvml_device_get_pgpu_metadata(value ml_interface, value ml_device)
         free(metadata);
         check_error(interface, error);
     }
-    ml_metadata = caml_alloc_string(metadataSize);
-    memcpy(String_val(ml_metadata), metadata, metadataSize);
+    ml_metadata =
+        caml_alloc_initialized_string(metadataSize,
+                                      (const char *) metadata);
     free(metadata);
 
     CAMLreturn(ml_metadata);
@@ -502,7 +502,9 @@ stub_nvml_get_vgpu_metadata(value ml_interface, value ml_vgpu_instance)
     }
 
     ml_metadata = caml_alloc_string(metadataSize);
-    memcpy(String_val(ml_metadata), metadata, metadataSize);
+    ml_metadata =
+        caml_alloc_initialized_string(metadataSize,
+                                      (const char *) metadata);
     free(metadata);
 
     CAMLreturn(ml_metadata);
@@ -673,9 +675,9 @@ stub_nvml_get_pgpu_vgpu_compatibility(value ml_interface,
     check_error(interface, error);
 
     size_t compatSize = sizeof(nvmlVgpuPgpuCompatibility_t);
-    ml_vgpu_pgpu_compat_meta = caml_alloc_string(compatSize);
-    memcpy(String_val(ml_vgpu_pgpu_compat_meta),
-           &vgpuCompatibility, compatSize);
+    ml_vgpu_pgpu_compat_meta =
+        caml_alloc_initialized_string(compatSize,
+                                      (const char *) &vgpuCompatibility);
 
     CAMLreturn(ml_vgpu_pgpu_compat_meta);
 }
