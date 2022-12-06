@@ -331,6 +331,8 @@ module Make (Impl : Gpumon_server.IMPLEMENTATION) = struct
     Server.Nvidia.nvml_is_attached Impl.Nvidia.is_attached
 end
 
+let doc = "GPU monitoring daemon"
+
 let () =
   Process.initialise () ;
   let maybe_interface = open_nvml_interface_noexn () in
@@ -360,6 +362,8 @@ let () =
       ~rpc_fn:(Idl.Exn.server Server.implementation)
       ()
   in
+  (* call after setting up RPC server to catch unimplemented API errors early *)
+  Xcp_service.configure ();
   let _ =
     handle_shutdown stop_handler () ;
     start server
