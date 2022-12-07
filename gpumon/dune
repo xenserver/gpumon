@@ -3,3 +3,7 @@
  (public_name gpumon)
  (libraries gpumon_lib rrdd-plugin threads xapi-idl.gpumon
    xapi-stdext-pervasives xapi-stdext-unix))
+
+(rule
+(alias runtest)
+(action (run ./gpumon.exe --help)))
