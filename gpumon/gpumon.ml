@@ -347,13 +347,15 @@ end
 let doc = "GPU monitoring daemon"
 
 let () =
+  let pid = Unix.getpid () in
   Process.initialise () ;
   (* Define the new signal handler *)
   let stop_handler signal =
     Nvml.NVML.detach () ;
-    Process.D.info "Caught signal in %s" __LOC__ ;
+    Process.D.info "Caught signal in %s for PID %d" __FUNCTION__ pid ;
     Process.D.info "Received signal %d: deregistering plugin %s..." signal
       plugin_name ;
+    Process.D.info "About to terminate process PID %d" pid ;
     exit 0
   in
   let module Gpumon_server = Gpumon_server.Make (struct
