@@ -11,7 +11,7 @@ let vgpu_config_dir = "/usr/share/nvidia/vgpu"
 (* acquire NVML interface but give up after timeout. Note that this does
    not attach the NVML libarary but it waits for someone else to attach it
    if necessary. *)
-let get_nvml_or_wait ?(timeout = 30.0) () =
+let get_nvml_or_wait ~log ?(timeout = 30.0) () =
   let rec loop delay waited =
     match Nvml.NVML.get () with
     | Some _ as interface ->
@@ -28,8 +28,9 @@ let get_nvml_or_wait ?(timeout = 30.0) () =
   | true ->
       loop 2.0 0.0
   | false ->
-      Process.D.info "%s not found - assuming NVML library unavailable"
-        vgpu_config_dir ;
+      if log then
+        Process.D.info "%s not found - assuming NVML library unavailable"
+          vgpu_config_dir ;
       None
 
 (* Like get_nvml_or_wait but keep looping. Only call this in a thread
@@ -37,16 +38,18 @@ let get_nvml_or_wait ?(timeout = 30.0) () =
    this is not attaching the library but waits for it to be attached by
    some other thread. *)
 let get_nvml_or_wait_forever () =
-  let rec try_again_after delay =
-    match get_nvml_or_wait () with
+  let rec try_again_after ~log delay =
+    match get_nvml_or_wait ~log () with
     | Some interface ->
         interface
     | None ->
-        Process.D.info "Failed to open NVML interface - retrying in %4.0f" delay ;
+        if log then
+          Process.D.info "Failed to open NVML interface - retrying in %4.0f"
+            delay ;
         Thread.delay delay ;
-        try_again_after (min (delay *. 1.5) (20.0 *. 60.0))
+        try_again_after ~log:false (min (delay *. 1.5) (20.0 *. 60.0))
   in
-  try_again_after 60.0
+  try_again_after ~log:true 60.0
 
 let default_config : (int32 * Gpumon_config.config) list =
   let open Gpumon_config in
@@ -359,7 +362,7 @@ let () =
     exit 0
   in
   let module Gpumon_server = Gpumon_server.Make (struct
-    let interface () = get_nvml_or_wait ()
+    let interface () = get_nvml_or_wait ~log:true ()
   end) in
   (* create daemon module to bind server call declarations to implementations *)
   let module Daemon = Make (Gpumon_server) in
