@@ -7,13 +7,11 @@ on:
 jobs:
   ocaml-test:
     name: Ocaml tests
-    runs-on: ubuntu-20.04
-    env:
-      package: "gpumon"
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Pull configuration from xs-opam
         run: |
@@ -21,25 +19,33 @@ jobs:
 
       - name: Load environment file
         id: dotenv
-        uses: falti/dotenv-action@v0.2.7
+        uses: falti/dotenv-action@v1
+
+      - name: Update Ubuntu repositories
+        shell: bash
+        run: sudo apt-get update
 
       - name: Use ocaml
-        uses: avsm/setup-ocaml@v1
+        uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-version: ${{ steps.dotenv.outputs.ocaml_version_full }}
-          opam-repository: ${{ steps.dotenv.outputs.repository }}
+          ocaml-compiler: ${{ steps.dotenv.outputs.ocaml_version_full }}
+          opam-repositories: |
+            xs-opam: ${{ steps.dotenv.outputs.repository }}
+          dune-cache: true
+        env:
+          DUNE_CACHE_STORAGE_MODE: copy
 
       - name: Install dependencies
-        run: |
-          opam pin add . --no-action
-          opam depext -u ${{ env.package }}
-          opam install ${{ env.package }} --deps-only --with-test -v
+        shell: bash
+        run: opam install . --deps-only --with-test -v
 
       - name: Build
+        shell: bash
         run: |
           opam exec -- cp mocks/mock.ml lib/nvml.ml
           opam exec -- cp mocks/mock.c stubs/nvml_stubs.c
           opam exec -- make
 
       - name: Run tests
+        shell: bash
         run: opam exec -- make test

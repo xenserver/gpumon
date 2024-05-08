@@ -142,8 +142,8 @@ let device_type_of_v2_format = function
       ( if List.mem_assoc "subsystem_device_id" dict then
           List.assoc "subsystem_device_id" dict |> unbox_string >>= id_of_string
           >>= fun id -> Ok (Match id)
-      else
-        Ok Any
+        else
+          Ok Any
       )
       (* Try to read the list of metrics. *)
       >>= fun subsystem_device_id ->
